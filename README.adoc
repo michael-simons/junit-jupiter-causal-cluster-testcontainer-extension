@@ -1,0 +1,96 @@
+= JUnit Jupiter Causal Cluster Testcontainer extension
+Michael Simons <michael.simons@neo4j.com>
+:doctype: article
+:lang: en
+:listing-caption: Listing
+:source-highlighter: coderay
+:icons: font
+
+[abstract]
+--
+This is a WiP JUnit Jupiter extension that provides a https://neo4j.com/docs/operations-manual/current/clustering/[Neo4j Causual Cluster] for JUnit based integration tests.
+--
+
+== Installation
+
+The extension is not yet available on central, so you have to build it yourself.
+Please use
+
+[source,bash,indent=0]
+----
+./mvnw clean install
+----
+
+on Unix-like operation systems and
+
+[source,bash,indent=0]
+----
+mvnw.cmd clean install
+----
+
+on Windows.
+
+== Usage
+
+Declare the extension as Maven dependency:
+
+[source,xml,indent=0]
+----
+<dependency>
+    <groupId>eu.michael-simons.neo4j</groupId>
+    <artifactId>junit-jupiter-causal-cluster-testcontainer-extension</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <scope>test</scope>
+</dependency>
+----
+
+You also need the Neo4j Java Driver, but I guess you already have that in  your application:
+
+[source,xml,indent=0]
+----
+<dependency>
+    <groupId>org.neo4j.driver</groupId>
+    <artifactId>neo4j-java-driver</artifactId>
+    <version>${neo4j-java-driver.version}</version>
+</dependency>
+----
+
+A test against a causal cluster now looks like this:
+
+[source,java,indent=0]
+----
+import java.net.URI;
+
+import org.junit.jupiter.api.Test;
+import org.neo4j.driver.v1.AuthToken;
+import org.neo4j.driver.v1.AuthTokens;
+import org.neo4j.driver.v1.Driver;
+import org.neo4j.driver.v1.GraphDatabase;
+import org.neo4j.driver.v1.Session;
+import org.neo4j.junit.jupiter.causal_cluster.NeedsCausalCluster;
+import org.neo4j.junit.jupiter.causal_cluster.Neo4jUri;
+
+@NeedsCausalCluster(password = PASSWORD) // <1>
+public class SimpleTest {
+
+    static final String USERNAME = "neo4j";
+    static final String PASSWORD = "cc";
+
+    @Neo4jUri // <2>
+    private static URI neo4jUri;
+
+    @Test
+    void aTest() {
+
+        AuthToken authToken = AuthTokens.basic(USERNAME, PASSWORD);
+        try (
+            Driver driver = GraphDatabase.driver(neo4jUri, authToken);
+            Session session = driver.session();
+        ) {
+            session.run("MATCH (n) RETURN n").list();
+        }
+    }
+}
+----
+<1> Register the extension and set a password (Default is `password`)
+<2> Mark a field as `@Neo4jUri`. The field can be of type `URI` or `String` and will contain a `bolt+routing` uri into the cluster
