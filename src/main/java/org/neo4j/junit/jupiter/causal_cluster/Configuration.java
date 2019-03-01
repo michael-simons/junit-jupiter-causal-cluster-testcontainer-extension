@@ -18,6 +18,11 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
+import lombok.experimental.Wither;
+
 import java.io.Serializable;
 import java.time.Duration;
 import java.util.function.IntFunction;
@@ -29,6 +34,10 @@ import java.util.stream.Stream;
  *
  * @author Michael J. Simons
  */
+@RequiredArgsConstructor
+@Getter
+@Wither
+@ToString
 class Configuration implements Serializable {
 	private final String neo4jVersion;
 
@@ -40,34 +49,9 @@ class Configuration implements Serializable {
 
 	private final String password;
 
-	public Configuration(String neo4jVersion, int numberOfCoreMembers, int numberOfReadReplicas,
-		Duration startupTimeout, String password) {
-		this.neo4jVersion = neo4jVersion;
-		this.numberOfCoreMembers = numberOfCoreMembers;
-		this.numberOfReadReplicas = numberOfReadReplicas;
-		this.startupTimeout = startupTimeout;
-		this.password = password;
-	}
+	private final int initialHeapSize;
 
-	public String getNeo4jVersion() {
-		return neo4jVersion;
-	}
-
-	public int getNumberOfCoreMembers() {
-		return numberOfCoreMembers;
-	}
-
-	public int getNumberOfReadReplicas() {
-		return numberOfReadReplicas;
-	}
-
-	public Duration getStartupTimeout() {
-		return startupTimeout;
-	}
-
-	public String getPassword() {
-		return password;
-	}
+	private final int pagecacheSize;
 
 	Stream<String> iterateCoreMembers() {
 		final IntFunction<String> generateInstanceName = i -> String.format("neo4j%d", i);
@@ -77,16 +61,5 @@ class Configuration implements Serializable {
 
 	String getImageName() {
 		return String.format("neo4j:%s-enterprise", neo4jVersion);
-	}
-
-	@Override
-	public String toString() {
-		return "Configuration{" +
-			"neo4jVersion='" + neo4jVersion + '\'' +
-			", numberOfCoreMembers=" + numberOfCoreMembers +
-			", numberOfReadReplicas=" + numberOfReadReplicas +
-			", startupTimeout=" + startupTimeout +
-			", password='" + password + '\'' +
-			'}';
 	}
 }

@@ -90,10 +90,12 @@ class CausalCluster implements CloseableResource {
 				.withNetwork(network)
 				.withNetworkAliases(name)
 				.withEnv(formatConfigurationKey("dbms.mode"), "CORE")
+				.withEnv(formatConfigurationKey("dbms.memory.pagecache.size"), configuration.getPagecacheSize() + "M")
+				.withEnv(formatConfigurationKey("dbms.memory.heap.initial_size"), configuration.getInitialHeapSize() + "M")
 				.withEnv(formatConfigurationKey("dbms.connectors.default_listen_address"), "0.0.0.0")
 				.withEnv(formatConfigurationKey("dbms.connectors.default_advertised_address"), name)
 				.withEnv(formatConfigurationKey("dbms.connector.bolt.advertised_address"),
-					getProxyUrl.apply(sidecars.get(name)))
+				getProxyUrl.apply(sidecars.get(name)))
 				.withEnv(formatConfigurationKey("causal_clustering.initial_discovery_members"), initialDiscoveryMembers)
 				.waitingFor(waitForBolt))
 			.collect(toList());

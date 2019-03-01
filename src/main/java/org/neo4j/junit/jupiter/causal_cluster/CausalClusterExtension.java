@@ -47,21 +47,30 @@ class CausalClusterExtension implements BeforeAllCallback {
 	static final long DEFAULT_STARTUP_TIMEOUT_IN_MILLIS = 5 * 60 * 1_000;
 	static final String DEFAULT_PASSWORD = "password";
 
-	private static final String KEY_NUMBER_OF_CORE_MEMBERS = "numberOfCoreMembers";
-	private static final String KEY_NEO4J_VERSION = "neo4jVersion";
-	private static final String KEY_STARTUP_TIMEOUT = "startupTimeout";
-	private static final String KEY_PASSWORD = "password";
+	// Concisely very low, not yet configurable
+	static final int DEFAULT_HEAP_SIZE_IN_MB = 10;
+	static final int DEFAULT_PAGE_CACHE_IN_MB = 10;
+
+	private static final String KEY_CONFIG = "config";
 	private static final String KEY = "neo4j.causalCluster";
+
+	private static final Configuration DEFAULT_CONFIGURATION = new Configuration(DEFAULT_NEO4J_VERSION,
+		DEFAULT_NUMBER_OF_CORE_MEMBERS,
+		DEFAULT_NUMBER_OF_READ_REPLICAS, Duration.ofMillis(DEFAULT_STARTUP_TIMEOUT_IN_MILLIS), DEFAULT_PASSWORD,
+		DEFAULT_HEAP_SIZE_IN_MB, DEFAULT_PAGE_CACHE_IN_MB);
 
 	public void beforeAll(ExtensionContext context) {
 
 		AnnotationSupport.findAnnotation(context.getRequiredTestClass(), NeedsCausalCluster.class)
 			.ifPresent(annotation -> {
-				ExtensionContext.Store store = context.getStore(NAMESPACE);
-				store.put(KEY_NUMBER_OF_CORE_MEMBERS, annotation.numberOfCoreMembers());
-				store.put(KEY_NEO4J_VERSION, annotation.neo4jVersion());
-				store.put(KEY_STARTUP_TIMEOUT, annotation.startupTimeOutInMillis());
-				store.put(KEY_PASSWORD, annotation.password());
+				final ExtensionContext.Store store = context.getStore(NAMESPACE);
+
+				final Configuration configuration = DEFAULT_CONFIGURATION
+					.withNeo4jVersion(annotation.neo4jVersion())
+					.withNumberOfCoreMembers(annotation.numberOfCoreMembers())
+					.withStartupTimeout(Duration.ofMillis(annotation.startupTimeOutInMillis()))
+					.withPassword(annotation.password());
+				store.put(KEY_CONFIG, configuration);
 			});
 
 		injectFields(context, context.getTestInstances().map(TestInstances::getInnermostInstance).orElse(null));
@@ -97,17 +106,8 @@ class CausalClusterExtension implements BeforeAllCallback {
 	private static Object createCausalCluster(Class<?> type, ExtensionContext extensionContext) {
 
 		ExtensionContext.Store store = extensionContext.getStore(NAMESPACE);
-
-		String neo4jVersion = store.getOrComputeIfAbsent(KEY_NEO4J_VERSION, key -> DEFAULT_NEO4J_VERSION, String.class);
-		int numberOfCoreMembers = store
-			.getOrComputeIfAbsent(KEY_NUMBER_OF_CORE_MEMBERS, key -> DEFAULT_NUMBER_OF_CORE_MEMBERS, int.class);
-		int numberOfReadReplicas = DEFAULT_NUMBER_OF_READ_REPLICAS;
-		Duration startupTimeout = Duration.ofMillis(
-			store.getOrComputeIfAbsent(KEY_STARTUP_TIMEOUT, key -> DEFAULT_STARTUP_TIMEOUT_IN_MILLIS, long.class));
-		String password = store.getOrComputeIfAbsent(KEY_PASSWORD, key -> DEFAULT_PASSWORD, String.class);
-
-		Configuration configuration = new Configuration(neo4jVersion, numberOfCoreMembers, numberOfReadReplicas,
-			startupTimeout, password);
+		Configuration configuration = store
+			.getOrComputeIfAbsent(KEY_CONFIG, key -> DEFAULT_CONFIGURATION, Configuration.class);
 
 		URI uri = extensionContext.getStore(NAMESPACE)
 			.getOrComputeIfAbsent(KEY, key -> CausalCluster.start(configuration), CausalCluster.class).getURI();
