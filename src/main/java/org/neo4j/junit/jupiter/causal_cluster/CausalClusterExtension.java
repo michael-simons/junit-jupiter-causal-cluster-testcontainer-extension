@@ -71,9 +71,9 @@ class CausalClusterExtension implements BeforeAllCallback {
 					.withStartupTimeout(Duration.ofMillis(annotation.startupTimeOutInMillis()))
 					.withPassword(annotation.password());
 				store.put(KEY_CONFIG, configuration);
-			});
 
-		injectFields(context, context.getTestInstances().map(TestInstances::getInnermostInstance).orElse(null));
+				injectFields(context, context.getTestInstances().map(TestInstances::getInnermostInstance).orElse(null));
+			});
 	}
 
 	private void injectFields(ExtensionContext context, Object testInstance) {
