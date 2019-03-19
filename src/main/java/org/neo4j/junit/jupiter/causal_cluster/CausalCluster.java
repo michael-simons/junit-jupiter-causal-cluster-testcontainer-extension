@@ -69,7 +69,7 @@ class CausalCluster implements CloseableResource {
 				Function.identity(),
 				name -> new GenericContainer("alpine/socat:1.0.3")
 					.withNetwork(network)
-					// Expose the default bolt port on the side care
+					// Expose the default bolt port on the sidecar
 					.withExposedPorts(DEFAULT_BOLT_PORT)
 					// And redirect that port to the corresponding Neo4j instance
 					.withCommand(String
@@ -89,14 +89,13 @@ class CausalCluster implements CloseableResource {
 				.withAdminPassword(configuration.getPassword())
 				.withNetwork(network)
 				.withNetworkAliases(name)
-				.withEnv(formatConfigurationKey("dbms.mode"), "CORE")
-				.withEnv(formatConfigurationKey("dbms.memory.pagecache.size"), configuration.getPagecacheSize() + "M")
-				.withEnv(formatConfigurationKey("dbms.memory.heap.initial_size"), configuration.getInitialHeapSize() + "M")
-				.withEnv(formatConfigurationKey("dbms.connectors.default_listen_address"), "0.0.0.0")
-				.withEnv(formatConfigurationKey("dbms.connectors.default_advertised_address"), name)
-				.withEnv(formatConfigurationKey("dbms.connector.bolt.advertised_address"),
-				getProxyUrl.apply(sidecars.get(name)))
-				.withEnv(formatConfigurationKey("causal_clustering.initial_discovery_members"), initialDiscoveryMembers)
+				.withNeo4jConfig("dbms.mode", "CORE")
+				.withNeo4jConfig("dbms.memory.pagecache.size", configuration.getPagecacheSize() + "M")
+				.withNeo4jConfig("dbms.memory.heap.initial_size", configuration.getInitialHeapSize() + "M")
+				.withNeo4jConfig("dbms.connectors.default_listen_address", "0.0.0.0")
+				.withNeo4jConfig("dbms.connectors.default_advertised_address", name)
+				.withNeo4jConfig("dbms.connector.bolt.advertised_address", getProxyUrl.apply(sidecars.get(name)))
+				.withNeo4jConfig("causal_clustering.initial_discovery_members", initialDiscoveryMembers)
 				.waitingFor(waitForBolt))
 			.collect(toList());
 
@@ -143,13 +142,5 @@ class CausalCluster implements CloseableResource {
 	public void close() {
 		sidecars.forEach(GenericContainer::stop);
 		clusterMembers.forEach(GenericContainer::stop);
-	}
-
-	private static String formatConfigurationKey(String plainConfigKey) {
-		final String prefix = "NEO4J_";
-
-		return String.format("%s%s", prefix, plainConfigKey
-			.replaceAll("_", "__")
-			.replaceAll("\\.", "_"));
 	}
 }

@@ -17,7 +17,7 @@
 		<lombok.version>1.18.6</lombok.version>
 		<maven-compiler-plugin.version>3.8.0</maven-compiler-plugin.version>
 		<maven-surefire-plugin.version>2.22.1</maven-surefire-plugin.version>
-		<testcontainers.version>1.10.5</testcontainers.version>
+		<testcontainers.version>1.10.7</testcontainers.version>
 	</properties>
 
 	<dependencies>
