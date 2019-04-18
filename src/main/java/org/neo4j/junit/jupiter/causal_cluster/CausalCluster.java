@@ -33,8 +33,6 @@ import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Neo4jContainer;
 import org.testcontainers.containers.Network;
-import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy;
-import org.testcontainers.containers.wait.strategy.WaitStrategy;
 
 /**
  * This takes care of all the containers started.
@@ -48,11 +46,6 @@ class CausalCluster implements CloseableResource {
 	static CausalCluster start(Configuration configuration) {
 
 		final int numberOfCoreMembers = configuration.getNumberOfCoreMembers();
-
-		// Currently needed as a whole new waiting strategy due to a bug in test containers
-		WaitStrategy waitForBolt = new LogMessageWaitStrategy()
-			.withRegEx(String.format(".*Bolt enabled on 0\\.0\\.0\\.0:%d\\.\n", DEFAULT_BOLT_PORT))
-			.withStartupTimeout(configuration.getStartupTimeout());
 
 		// Prepare one shared network for those containers
 		Network network = Network.newNetwork();
@@ -96,7 +89,7 @@ class CausalCluster implements CloseableResource {
 				.withNeo4jConfig("dbms.connectors.default_advertised_address", name)
 				.withNeo4jConfig("dbms.connector.bolt.advertised_address", getProxyUrl.apply(sidecars.get(name)))
 				.withNeo4jConfig("causal_clustering.initial_discovery_members", initialDiscoveryMembers)
-				.waitingFor(waitForBolt))
+				.withStartupTimeout(configuration.getStartupTimeout()))
 			.collect(toList());
 
 		// Start all of them in parallel
