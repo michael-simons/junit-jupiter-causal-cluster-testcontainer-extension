@@ -5,7 +5,7 @@ Michael Simons <michael.simons@neo4j.com>
 :listing-caption: Listing
 :source-highlighter: coderay
 :icons: font
-:
+:latest_version: 1.0.0
 
 [abstract]
 --
@@ -35,12 +35,12 @@ on Windows.
 
 Declare the extension as Maven dependency:
 
-[source,xml,indent=0]
+[source,xml,subs="verbatim,attributes"]
 ----
 <dependency>
     <groupId>eu.michael-simons.neo4j</groupId>
     <artifactId>junit-jupiter-causal-cluster-testcontainer-extension</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>{latest_version}</version>
     <scope>test</scope>
 </dependency>
 ----
