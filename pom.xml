@@ -13,12 +13,12 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
 		<java.version>1.8</java.version>
-		<junit-jupiter.version>5.4.0</junit-jupiter.version>
+		<junit-jupiter.version>5.4.2</junit-jupiter.version>
 		<lombok.version>1.18.6</lombok.version>
 		<maven-compiler-plugin.version>3.8.0</maven-compiler-plugin.version>
-		<maven-surefire-plugin.version>2.22.1</maven-surefire-plugin.version>
+		<maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
 		<slf4j.version>1.7.26</slf4j.version>
-		<testcontainers.version>1.11.2</testcontainers.version>
+		<testcontainers.version>1.11.3</testcontainers.version>
 	</properties>
 
 	<dependencyManagement>
@@ -32,7 +32,6 @@
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
-
 
 	<dependencies>
 		<dependency>
