@@ -7,29 +7,12 @@ Michael Simons <michael.simons@neo4j.com>
 :icons: font
 :latest_version: 1.0.0
 
+image::https://maven-badges.herokuapp.com/maven-central/eu.michael-simons.neo4j/junit-jupiter-causal-cluster-testcontainer-extension/badge.svg[link=https://maven-badges.herokuapp.com/maven-central/eu.michael-simons.neo4j/junit-jupiter-causal-cluster-testcontainer-extension]
+
 [abstract]
 --
-This is a WiP JUnit Jupiter extension that provides a https://neo4j.com/docs/operations-manual/current/clustering/[Neo4j Causual Cluster] for JUnit based integration tests.
+This is a JUnit Jupiter extension that provides a https://neo4j.com/docs/operations-manual/current/clustering/[Neo4j Causual Cluster] for JUnit based integration tests.
 --
-
-== Installation
-
-The extension is not yet available on central, so you have to build it yourself.
-Please use
-
-[source,bash,indent=0]
-----
-./mvnw clean install
-----
-
-on Unix-like operation systems and
-
-[source,bash,indent=0]
-----
-mvnw.cmd clean install
-----
-
-on Windows.
 
 == Usage
 
