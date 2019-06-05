@@ -5,6 +5,7 @@ Michael Simons <michael.simons@neo4j.com>
 :listing-caption: Listing
 :source-highlighter: coderay
 :icons: font
+:
 
 [abstract]
 --
@@ -94,3 +95,27 @@ public class SimpleTest {
 ----
 <1> Register the extension and set a password (Default is `password`)
 <2> Mark a field as `@Neo4jUri`. The field can be of type `URI` or `String` and will contain a `bolt+routing` uri into the cluster
+
+
+=== Custom versions
+
+A custom version can be used by setting the appropriate attribute:
+
+[source,java,indent=0]
+----
+@NeedsCausalCluster(neo4jVersion = "3.5.1")
+public class SimpleTest {
+}
+----
+
+=== Custom images
+
+You can also use completely custom images. Those have precedence over the version number.
+Make sure those are enterprise images:
+
+[source,java,indent=0]
+----
+@NeedsCausalCluster(customImageName = "MY_NEO4j:4711")
+public class SimpleTest {
+}
+----

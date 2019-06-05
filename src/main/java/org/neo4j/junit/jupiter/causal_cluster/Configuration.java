@@ -25,6 +25,7 @@ import lombok.experimental.Wither;
 
 import java.io.Serializable;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.function.IntFunction;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -39,6 +40,7 @@ import java.util.stream.Stream;
 @Wither
 @ToString
 class Configuration implements Serializable {
+
 	private final String neo4jVersion;
 
 	private final int numberOfCoreMembers;
@@ -53,6 +55,11 @@ class Configuration implements Serializable {
 
 	private final int pagecacheSize;
 
+	/**
+	 * Optional custom image name. Has precedence of the version number if set.
+	 */
+	private final String customImageName;
+
 	Stream<String> iterateCoreMembers() {
 		final IntFunction<String> generateInstanceName = i -> String.format("neo4j%d", i);
 
@@ -60,6 +67,7 @@ class Configuration implements Serializable {
 	}
 
 	String getImageName() {
-		return String.format("neo4j:%s-enterprise", neo4jVersion);
+		return Optional.ofNullable(customImageName).filter(s -> !s.isEmpty())
+			.orElseGet(() -> String.format("neo4j:%s-enterprise", neo4jVersion));
 	}
 }

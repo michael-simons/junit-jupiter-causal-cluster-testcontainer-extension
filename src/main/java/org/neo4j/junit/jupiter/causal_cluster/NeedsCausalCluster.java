@@ -36,7 +36,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 public @interface NeedsCausalCluster {
 	int numberOfCoreMembers() default CausalClusterExtension.DEFAULT_NUMBER_OF_CORE_MEMBERS;
 
+	/**
+	 * @return A valid Neo4j version number.
+	 */
 	String neo4jVersion() default CausalClusterExtension.DEFAULT_NEO4J_VERSION;
+
+	/**
+	 * @return A completely custom image name. Must refer to a Neo4j enterprise image.
+	 */
+	String customImageName() default "";
 
 	/**
 	 * Startup timeout for the cluster. Defaults to 5 minutes.

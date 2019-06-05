@@ -57,7 +57,7 @@ class CausalClusterExtension implements BeforeAllCallback {
 	private static final Configuration DEFAULT_CONFIGURATION = new Configuration(DEFAULT_NEO4J_VERSION,
 		DEFAULT_NUMBER_OF_CORE_MEMBERS,
 		DEFAULT_NUMBER_OF_READ_REPLICAS, Duration.ofMillis(DEFAULT_STARTUP_TIMEOUT_IN_MILLIS), DEFAULT_PASSWORD,
-		DEFAULT_HEAP_SIZE_IN_MB, DEFAULT_PAGE_CACHE_IN_MB);
+		DEFAULT_HEAP_SIZE_IN_MB, DEFAULT_PAGE_CACHE_IN_MB, null);
 
 	public void beforeAll(ExtensionContext context) {
 
@@ -69,7 +69,8 @@ class CausalClusterExtension implements BeforeAllCallback {
 					.withNeo4jVersion(annotation.neo4jVersion())
 					.withNumberOfCoreMembers(annotation.numberOfCoreMembers())
 					.withStartupTimeout(Duration.ofMillis(annotation.startupTimeOutInMillis()))
-					.withPassword(annotation.password());
+					.withPassword(annotation.password())
+					.withCustomImageName(annotation.customImageName());
 				store.put(KEY_CONFIG, configuration);
 
 				injectFields(context, context.getTestInstances().map(TestInstances::getInnermostInstance).orElse(null));
