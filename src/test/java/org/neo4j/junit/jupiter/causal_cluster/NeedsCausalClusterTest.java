@@ -46,7 +46,7 @@ class NeedsCausalClusterTest {
 				.selectors(selectClass(StaticFieldOnPerMethodLifecycleTest.class),
 					selectClass(InstanceFieldInPerClassLifecycleTest.class),
 					selectClass(NestedClassWithAllNeededAnnotationsTest.class))
-				.execute().tests()
+				.execute().testEvents()
 				.assertStatistics(stats -> stats.succeeded(3).failed(0));
 		}
 
@@ -55,7 +55,7 @@ class NeedsCausalClusterTest {
 			EngineTestKit.engine(ENGINE_ID)
 				.selectors(selectClass(MultipleInjectionPointsPerMethodLifeCycleTest.class),
 					selectClass(MultipleInjectionPointsPerClassLifeCycleTest.class))
-				.execute().tests()
+				.execute().testEvents()
 				.assertStatistics(stats -> stats.succeeded(2).failed(0));
 		}
 	}
@@ -69,7 +69,7 @@ class NeedsCausalClusterTest {
 					selectClass(MissingExtensionTest.class),
 					selectClass(MissingInjectionPoint.class),
 					selectClass(LifecyleOnOuterClass.class))
-				.execute().tests()
+				.execute().testEvents()
 				.assertStatistics(stats -> stats.succeeded(0).failed(3));
 		}
 
@@ -78,7 +78,7 @@ class NeedsCausalClusterTest {
 			EngineTestKit.engine(ENGINE_ID)
 				.selectors(
 					selectClass(WrongExtensionPoint.class))
-				.execute().tests()
+				.execute().testEvents()
 				.assertStatistics(stats -> stats.started(0));
 		}
 	}
