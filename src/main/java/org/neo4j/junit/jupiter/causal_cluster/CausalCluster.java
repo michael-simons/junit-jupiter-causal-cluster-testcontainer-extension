@@ -22,6 +22,7 @@ import static java.util.stream.Collectors.*;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -75,6 +76,7 @@ class CausalCluster implements CloseableResource {
 		Function<GenericContainer, String> getProxyUrl = instance ->
 			String.format("%s:%d", instance.getContainerIpAddress(), instance.getMappedPort(DEFAULT_BOLT_PORT));
 
+		final boolean is35 = configuration.getNeo4jVersion().startsWith("3.5");
 		// Build the cluster
 		List<Neo4jContainer> cluster = configuration.iterateCoreMembers()
 			.map(name -> new Neo4jContainer<>(configuration.getImageName())
@@ -82,13 +84,16 @@ class CausalCluster implements CloseableResource {
 				.withAdminPassword(configuration.getPassword())
 				.withNetwork(network)
 				.withNetworkAliases(name)
+				.withCreateContainerCmdModifier(cmd -> cmd.withHostName(name))
 				.withNeo4jConfig("dbms.mode", "CORE")
 				.withNeo4jConfig("dbms.memory.pagecache.size", configuration.getPagecacheSize() + "M")
 				.withNeo4jConfig("dbms.memory.heap.initial_size", configuration.getInitialHeapSize() + "M")
-				.withNeo4jConfig("dbms.connectors.default_listen_address", "0.0.0.0")
-				.withNeo4jConfig("dbms.connectors.default_advertised_address", name)
+				.withNeo4jConfig(is35 ? "dbms.connectors.default_listen_address" : "dbms.default_listen_address", "0.0.0.0")
+				.withNeo4jConfig(is35 ? "dbms.connectors.default_advertised_address" : "dbms.default_advertised_address", name)
 				.withNeo4jConfig("dbms.connector.bolt.advertised_address", getProxyUrl.apply(sidecars.get(name)))
 				.withNeo4jConfig("causal_clustering.initial_discovery_members", initialDiscoveryMembers)
+				.withNeo4jConfig("causal_clustering.minimum_core_cluster_size_at_formation", Integer.toString(configuration.getNumberOfCoreMembers()))
+				.withNeo4jConfig("causal_clustering.minimum_core_cluster_size_at_runtime", Integer.toString(configuration.getNumberOfCoreMembers()))
 				.withStartupTimeout(configuration.getStartupTimeout()))
 			.collect(toList());
 
