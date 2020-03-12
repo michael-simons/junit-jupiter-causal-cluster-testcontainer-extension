@@ -93,6 +93,7 @@ class NeedsCausalClusterTest {
 		}
 	}
 
+	@NeedsCausalCluster
 	static class StaticFieldOnPerMethodLifecycleTest {
 
 		@Neo4jUri
