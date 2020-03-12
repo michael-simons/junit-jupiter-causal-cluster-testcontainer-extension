@@ -25,6 +25,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.platform.testkit.engine.EngineTestKit;
+import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
 
 /**
  * Testing the test.
@@ -80,7 +83,16 @@ class NeedsCausalClusterTest {
 		}
 	}
 
-	@NeedsCausalCluster
+	static void verifyConnectivity(String uri) {
+
+		try (Driver driver = GraphDatabase.driver(uri, AuthTokens.basic("neo4j", "password"))) {
+			driver.verifyConnectivity();
+		} catch(Exception e) {
+			e.printStackTrace();
+			throw e;
+		}
+	}
+
 	static class StaticFieldOnPerMethodLifecycleTest {
 
 		@Neo4jUri
@@ -88,7 +100,9 @@ class NeedsCausalClusterTest {
 
 		@Test
 		void aTest() {
+
 			assertNotNull(clusterUri);
+			verifyConnectivity(clusterUri);
 		}
 	}
 
@@ -103,7 +117,9 @@ class NeedsCausalClusterTest {
 
 		@Test
 		void aTest() {
+
 			assertTrue(clusterUri1.equals(clusterUri2));
+			verifyConnectivity(clusterUri1);
 		}
 	}
 
@@ -116,7 +132,9 @@ class NeedsCausalClusterTest {
 
 		@Test
 		void aTest() {
+
 			assertNotNull(clusterUri);
+			verifyConnectivity(clusterUri);
 		}
 	}
 
@@ -132,7 +150,9 @@ class NeedsCausalClusterTest {
 
 		@Test
 		void aTest() {
+
 			assertTrue(clusterUri1.equals(clusterUri2));
+			verifyConnectivity(clusterUri1);
 		}
 	}
 
@@ -148,7 +168,9 @@ class NeedsCausalClusterTest {
 
 			@Test
 			void aTest() {
+
 				assertNotNull(clusterUri);
+				verifyConnectivity(clusterUri);
 			}
 		}
 	}
