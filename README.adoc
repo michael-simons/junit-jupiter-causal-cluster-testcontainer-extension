@@ -5,9 +5,9 @@ Michael Simons <michael.simons@neo4j.com>
 :listing-caption: Listing
 :source-highlighter: coderay
 :icons: font
-:latest_version: 1.0.0
+:latest_version: 4.0.1.0
 
-image::https://maven-badges.herokuapp.com/maven-central/eu.michael-simons.neo4j/junit-jupiter-causal-cluster-testcontainer-extension/badge.svg[link=https://maven-badges.herokuapp.com/maven-central/eu.michael-simons.neo4j/junit-jupiter-causal-cluster-testcontainer-extension]
+image::https://img.shields.io/maven-central/v/eu.michael-simons.neo4j/junit-jupiter-causal-cluster-testcontainer-extension.svg[Maven Central,link=http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22eu.michael-simons.neo4j%22%20AND%20a%3A%22junit-jupiter-causal-cluster-testcontainer-extension%22]
 
 [abstract]
 --
@@ -46,11 +46,11 @@ A test against a causal cluster now looks like this:
 import java.net.URI;
 
 import org.junit.jupiter.api.Test;
-import org.neo4j.driver.v1.AuthToken;
-import org.neo4j.driver.v1.AuthTokens;
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.GraphDatabase;
-import org.neo4j.driver.v1.Session;
+import org.neo4j.driver.AuthToken;
+import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Session;
 import org.neo4j.junit.jupiter.causal_cluster.NeedsCausalCluster;
 import org.neo4j.junit.jupiter.causal_cluster.Neo4jUri;
 
@@ -86,7 +86,7 @@ A custom version can be used by setting the appropriate attribute:
 
 [source,java,indent=0]
 ----
-@NeedsCausalCluster(neo4jVersion = "3.5.1")
+@NeedsCausalCluster(neo4jVersion = "3.5.16")
 public class SimpleTest {
 }
 ----
