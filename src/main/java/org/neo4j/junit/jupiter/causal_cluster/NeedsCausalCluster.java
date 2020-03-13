@@ -18,7 +18,9 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
@@ -32,6 +34,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
 @ExtendWith(CausalClusterExtension.class)
 public @interface NeedsCausalCluster {
 	int numberOfCoreMembers() default CausalClusterExtension.DEFAULT_NUMBER_OF_CORE_MEMBERS;
