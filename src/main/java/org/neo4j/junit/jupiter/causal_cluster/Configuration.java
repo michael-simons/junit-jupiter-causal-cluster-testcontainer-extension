@@ -25,6 +25,8 @@ import lombok.With;
 
 import java.io.Serializable;
 import java.time.Duration;
+import java.util.AbstractMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.IntFunction;
 import java.util.stream.IntStream;
@@ -60,10 +62,11 @@ class Configuration implements Serializable {
 	 */
 	private final String customImageName;
 
-	Stream<String> iterateCoreMembers() {
+	Stream<Map.Entry<Integer, String>> iterateCoreMembers() {
 		final IntFunction<String> generateInstanceName = i -> String.format("neo4j%d", i);
 
-		return IntStream.rangeClosed(1, numberOfCoreMembers).mapToObj(generateInstanceName);
+		return IntStream.rangeClosed(1, numberOfCoreMembers)
+			.mapToObj(i -> new AbstractMap.SimpleEntry<>(i - 1, generateInstanceName.apply(i)));
 	}
 
 	String getImageName() {
