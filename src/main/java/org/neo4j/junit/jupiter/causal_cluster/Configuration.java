@@ -21,7 +21,7 @@ package org.neo4j.junit.jupiter.causal_cluster;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
-import lombok.experimental.Wither;
+import lombok.With;
 
 import java.io.Serializable;
 import java.time.Duration;
@@ -37,7 +37,7 @@ import java.util.stream.Stream;
  */
 @RequiredArgsConstructor
 @Getter
-@Wither
+@With
 @ToString
 class Configuration implements Serializable {
 
