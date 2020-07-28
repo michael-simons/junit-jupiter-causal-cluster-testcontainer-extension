@@ -18,23 +18,28 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.platform.engine.discovery.DiscoverySelectors.*;
-
-import java.net.URI;
-import java.util.Collection;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.platform.testkit.engine.EngineTestKit;
 import org.junit.platform.testkit.engine.Events;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 
 /**
  * Testing the test.
@@ -57,28 +62,35 @@ class NeedsCausalClusterTest {
 					selectClass(InstanceUriFieldInPerClassLifecycleTest.class),
 					selectClass(InstanceCollectionFieldInPerClassLifecycleTest.class),
 					selectClass(InstanceClusterFieldInPerClassLifecycleTest.class),
-					selectClass(NestedClassWithAllNeededAnnotationsTest.class))
+					selectClass(NestedClassWithAllNeededAnnotationsTest.class)
+				)
 				.execute().testEvents();
 
+			assertThat(testEvents.failed().stream().collect(Collectors.toList()))
+				.hasSize(0);
 			assertThat(testEvents.succeeded().stream().collect(Collectors.toList()))
-				.hasSize(5);
+				.hasSize(6);
 		}
 
 		@Test
 		void shouldNotStartMultipleClusters() {
 			Events testEvents = EngineTestKit.engine(ENGINE_ID)
 				.selectors(
+					selectClass(MultipleCollectionInjectionPointsPerMethodLifeCycleTest.class),
 					selectClass(MultipleUriInjectionPointsPerMethodLifeCycleTest.class),
 					selectClass(MultipleClusterInjectionPointsPerMethodLifeCycleTest.class),
 					selectClass(MultipleInjectionPointsDifferentTypePerMethodLifeCycleTest.class),
+					selectClass(MultipleCollectionInjectionPointsPerClassLifeCycleTest.class),
 					selectClass(MultipleUriInjectionPointsPerClassLifeCycleTest.class),
 					selectClass(MultipleClusterInjectionPointsPerClassLifeCycleTest.class),
 					selectClass(MultipleInjectionPointsDifferentTypePerClassLifeCycleTest.class)
 				)
 				.execute().testEvents();
 
+			assertThat(testEvents.failed().stream().collect(Collectors.toList()))
+				.hasSize(0);
 			assertThat(testEvents.succeeded().stream().collect(Collectors.toList()))
-				.hasSize(6);
+				.hasSize(8);
 		}
 	}
 
@@ -94,6 +106,8 @@ class NeedsCausalClusterTest {
 					selectClass(LifecyleOnOuterClass.class))
 				.execute().testEvents();
 
+			assertThat(testEvents.succeeded().stream().collect(Collectors.toList()))
+				.hasSize(0);
 			assertThat(testEvents.failed().stream().collect(Collectors.toList()))
 				.hasSize(3);
 		}
@@ -176,11 +190,46 @@ class NeedsCausalClusterTest {
 		@Neo4jUri
 		static String clusterUri2;
 
+		@Neo4jUri
+		static String clusterUri3;
+
+		@Neo4jUri
+		static String clusterUri4;
+
+		@Neo4jUri
+		static String clusterUri5;
+
+		@Neo4jUri
+		static String clusterUri6;
+
 		@Test
 		void aTest() {
 
-			assertEquals(clusterUri1, clusterUri2);
-			verifyConnectivity(clusterUri1);
+			String[] injectedUris = new String[] {
+				clusterUri1, clusterUri2, clusterUri3, clusterUri4, clusterUri5, clusterUri6 };
+
+			List<String> distinctUris = Arrays.stream(injectedUris).distinct().collect(Collectors.toList());
+
+			assertThat(distinctUris.size()).isGreaterThanOrEqualTo(1).isLessThanOrEqualTo(3);
+
+			verifyConnectivity(distinctUris);
+		}
+	}
+
+	@NeedsCausalCluster
+	static class MultipleCollectionInjectionPointsPerMethodLifeCycleTest {
+
+		@Neo4jUri
+		static Collection<String> clusterUris1;
+
+		@Neo4jUri
+		static Collection<String> clusterUris2;
+
+		@Test
+		void aTest() {
+
+			assertThat(clusterUris1).containsExactlyInAnyOrderElementsOf(clusterUris2);
+			verifyConnectivity(clusterUris1);
 		}
 	}
 
@@ -217,10 +266,10 @@ class NeedsCausalClusterTest {
 		static Cluster cluster;
 
 		@Test
-		void aTest() {
+		void aTest() throws URISyntaxException {
 
-			assertTrue(clusterUris.contains(clusterUri));
-			assertEquals(clusterUriString, clusterUri.toString());
+			assertThat(clusterUris).containsOnlyOnce(clusterUri);
+			assertThat(clusterUris).containsOnlyOnce(new URI(clusterUriString));
 
 			assertThat(cluster.getAllCores().stream().map(Neo4jCore::getNeo4jUri))
 				.containsExactlyInAnyOrderElementsOf(clusterUris);
@@ -285,11 +334,46 @@ class NeedsCausalClusterTest {
 		@Neo4jUri
 		String clusterUri2;
 
+		@Neo4jUri
+		String clusterUri3;
+
+		@Neo4jUri
+		String clusterUri4;
+
+		@Neo4jUri
+		String clusterUri5;
+
+		@Neo4jUri
+		String clusterUri6;
+
+		@Test
+		void aTest() {
+			String[] injectedUris = new String[] {
+				clusterUri1, clusterUri2, clusterUri3, clusterUri4, clusterUri5, clusterUri6 };
+
+			List<String> distinctUris = Arrays.stream(injectedUris).distinct().collect(Collectors.toList());
+
+			assertThat(distinctUris.size()).isGreaterThanOrEqualTo(1).isLessThanOrEqualTo(3);
+
+			verifyConnectivity(distinctUris);
+		}
+	}
+
+	@NeedsCausalCluster
+	@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+	static class MultipleCollectionInjectionPointsPerClassLifeCycleTest {
+
+		@Neo4jUri
+		Collection<String> clusterUris1;
+
+		@Neo4jUri
+		Collection<String> clusterUris2;
+
 		@Test
 		void aTest() {
 
-			assertEquals(clusterUri1, clusterUri2);
-			verifyConnectivity(clusterUri1);
+			assertThat(clusterUris1).containsExactlyInAnyOrderElementsOf(clusterUris2);
+			verifyConnectivity(clusterUris1);
 		}
 	}
 
@@ -328,10 +412,10 @@ class NeedsCausalClusterTest {
 		Cluster cluster;
 
 		@Test
-		void aTest() {
+		void aTest() throws URISyntaxException {
 
-			assertTrue(clusterUris.contains(clusterUri));
-			assertEquals(clusterUriString, clusterUri.toString());
+			assertThat(clusterUris).containsOnlyOnce(clusterUri);
+			assertThat(clusterUris).containsOnlyOnce(new URI(clusterUriString));
 
 			assertThat(cluster.getAllCores().stream().map(Neo4jCore::getNeo4jUri))
 				.containsExactlyInAnyOrderElementsOf(clusterUris);

@@ -39,7 +39,7 @@ class CausalCluster implements Cluster, CloseableResource {
 	private final SocatContainer boltProxy;
 	private final List<Neo4jCore> clusterCores;
 
-	CausalCluster(SocatContainer boltProxy, List<Integer> boltPorts, List<Neo4jCore> clusterCores) {
+	CausalCluster(SocatContainer boltProxy, List<Neo4jCore> clusterCores) {
 
 		this.boltProxy = boltProxy;
 		this.clusterCores = clusterCores;

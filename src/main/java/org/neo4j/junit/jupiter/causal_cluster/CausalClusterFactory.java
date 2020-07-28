@@ -18,7 +18,9 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import static java.util.stream.Collectors.*;
+import org.testcontainers.containers.Neo4jContainer;
+import org.testcontainers.containers.Network;
+import org.testcontainers.containers.SocatContainer;
 
 import java.net.URI;
 import java.util.List;
@@ -26,9 +28,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.IntStream;
 
-import org.testcontainers.containers.Neo4jContainer;
-import org.testcontainers.containers.Network;
-import org.testcontainers.containers.SocatContainer;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 
 /**
  * This takes care of all the containers started.
@@ -110,14 +111,11 @@ final class CausalClusterFactory {
 			e.printStackTrace();
 		}
 
-		List<Integer> boltPorts = configuration.iterateCoreMembers().map(entry -> DEFAULT_BOLT_PORT + entry.getKey())
-			.collect(toList());
-
 		List<Neo4jCore> neo4jCores = IntStream.range(0, cluster.size())
-			.mapToObj(idx -> new Neo4jCore(cluster.get(idx), getNeo4jUri(boltPorts.get(idx))))
+			.mapToObj(idx -> new Neo4jCore(cluster.get(idx), getNeo4jUri(DEFAULT_BOLT_PORT + idx)))
 			.collect(toList());
 
-		return new CausalCluster(boltProxy, boltPorts, neo4jCores);
+		return new CausalCluster(boltProxy, neo4jCores);
 	}
 
 	private URI getNeo4jUri(int boltPort) {
