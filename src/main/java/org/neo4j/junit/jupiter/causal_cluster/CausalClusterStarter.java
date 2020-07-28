@@ -23,7 +23,7 @@ final class CausalClusterStarter {
 
 	private SocatContainer boltProxy;
 
-	public CausalClusterStarter(Configuration configuration) {
+	CausalClusterStarter(Configuration configuration) {
 		this.configuration = configuration;
 	}
 
