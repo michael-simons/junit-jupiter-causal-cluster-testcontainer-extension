@@ -33,13 +33,13 @@ import org.testcontainers.containers.SocatContainer;
  */
 class CausalCluster implements CloseableResource {
 
-	private final SocatContainer proxy;
+	private final SocatContainer boltProxy;
 	private final Collection<Neo4jContainer> clusterMembers;
 	private final int boltPort;
 
 	CausalCluster(SocatContainer boltProxy, int boltPort, Collection<Neo4jContainer> clusterMembers) {
 
-		this.proxy = boltProxy;
+		this.boltProxy = boltProxy;
 		this.clusterMembers = clusterMembers;
 		this.boltPort = boltPort;
 	}
@@ -47,15 +47,15 @@ class CausalCluster implements CloseableResource {
 	public URI getURI() {
 		return URI.create(String.format(
 			"neo4j://%s:%d",
-			proxy.getContainerIpAddress(),
-			proxy.getMappedPort(boltPort)
+			boltProxy.getContainerIpAddress(),
+			boltProxy.getMappedPort(boltPort)
 		));
 	}
 
 	@Override
 	public void close() {
 
-		proxy.stop();
+		boltProxy.stop();
 		clusterMembers.forEach(GenericContainer::stop);
 	}
 }
