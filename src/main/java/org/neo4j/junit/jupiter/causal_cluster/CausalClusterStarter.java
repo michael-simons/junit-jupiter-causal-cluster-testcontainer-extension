@@ -10,6 +10,11 @@ import org.testcontainers.containers.Neo4jContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.SocatContainer;
 
+/**
+ * This takes care of all the containers started.
+ *
+ * @author Michael J. Simons
+ */
 public class CausalClusterStarter {
 
 	private static final int DEFAULT_BOLT_PORT = 7687;

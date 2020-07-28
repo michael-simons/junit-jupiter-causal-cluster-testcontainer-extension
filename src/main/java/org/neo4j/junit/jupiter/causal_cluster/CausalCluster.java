@@ -27,7 +27,7 @@ import org.testcontainers.containers.Neo4jContainer;
 import org.testcontainers.containers.SocatContainer;
 
 /**
- * This takes care of all the containers started.
+ * This allows us to interact with the Neo4j Causal Cluster
  *
  * @author Michael J. Simons
  */
