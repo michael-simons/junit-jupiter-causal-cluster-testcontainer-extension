@@ -125,6 +125,15 @@ class CausalClusterExtension implements BeforeAllCallback {
 		});
 	}
 
+	private static void assertFieldIsNull(Class<?> annotation, Object testInstance, Field field)
+		throws IllegalAccessException {
+		if (field.get(testInstance) != null) {
+			throw new IllegalStateException(String.format(
+				"Fields annotated with @%s must be null", annotation.getName()
+			));
+		}
+	}
+
 	private static void assertSupportedType(Class<?> annotation, String target, Type type,
 		Class<?>... supportedTypes) {
 
@@ -140,15 +149,6 @@ class CausalClusterExtension implements BeforeAllCallback {
 		if (Arrays.stream(supportedTypes).noneMatch(t -> type == t)) {
 			String typeName = type.getName();
 			throw getExtensionConfigurationException(annotation, target, typeName, supportedTypes);
-		}
-	}
-
-	private static void assertFieldIsNull(Class<?> annotation, Object testInstance, Field field)
-		throws IllegalAccessException {
-		if (field.get(testInstance) != null) {
-			throw new IllegalStateException(String.format(
-				"Fields annotated with @%s must be null", annotation.getName()
-			));
 		}
 	}
 
