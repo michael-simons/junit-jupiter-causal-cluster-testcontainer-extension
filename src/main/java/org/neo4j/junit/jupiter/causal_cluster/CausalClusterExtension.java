@@ -111,7 +111,7 @@ class CausalClusterExtension implements BeforeAllCallback {
 			.getOrComputeIfAbsent(KEY_CONFIG, key -> DEFAULT_CONFIGURATION, Configuration.class);
 
 		URI uri = extensionContext.getStore(NAMESPACE)
-			.getOrComputeIfAbsent(KEY, key -> new CausalClusterStarter(configuration).start(), CausalCluster.class).getURI();
+			.getOrComputeIfAbsent(KEY, key -> new CausalClusterFactory(configuration).start(), CausalCluster.class).getURI();
 
 		return type == URI.class ? uri : uri.toString();
 	}

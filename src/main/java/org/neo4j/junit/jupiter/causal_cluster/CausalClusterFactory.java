@@ -15,7 +15,7 @@ import org.testcontainers.containers.SocatContainer;
  *
  * @author Michael J. Simons
  */
-final class CausalClusterStarter {
+final class CausalClusterFactory {
 
 	private static final int DEFAULT_BOLT_PORT = 7687;
 
@@ -23,7 +23,7 @@ final class CausalClusterStarter {
 
 	private SocatContainer boltProxy;
 
-	CausalClusterStarter(Configuration configuration) {
+	CausalClusterFactory(Configuration configuration) {
 		this.configuration = configuration;
 	}
 
