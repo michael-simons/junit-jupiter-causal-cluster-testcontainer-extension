@@ -18,8 +18,7 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -27,9 +26,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @NeedsCausalCluster
 public class AllAnnotationsAppliedTest {
@@ -77,7 +76,7 @@ public class AllAnnotationsAppliedTest {
 		assertThat(allUris).containsExactlyInAnyOrderElementsOf(clusterUriCollectionOfURIs);
 
 		// check that equality & hash code implementation doesn't mess up if we try adding the same cores to a set repeatedly
-		for (Neo4jCore core : cluster.getAllCores()){
+		for (Neo4jCore core : cluster.getAllCores()) {
 
 			Neo4jCore newCore = new Neo4jCore(core.unwrap(), new URI(core.getNeo4jUri().toString()));
 
@@ -102,7 +101,6 @@ public class AllAnnotationsAppliedTest {
 
 		assertThat(cluster).isInstanceOf(Cluster.class);
 	}
-
 
 	@Test
 	void singleValuesExistInCollection() {

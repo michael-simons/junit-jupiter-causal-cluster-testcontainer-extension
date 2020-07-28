@@ -18,10 +18,10 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
+import org.testcontainers.containers.Neo4jContainer;
+
 import java.net.URI;
 import java.util.Objects;
-
-import org.testcontainers.containers.Neo4jContainer;
 
 public class Neo4jCore implements AutoCloseable {
 
