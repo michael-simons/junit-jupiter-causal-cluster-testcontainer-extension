@@ -15,7 +15,7 @@ import org.testcontainers.containers.SocatContainer;
  *
  * @author Michael J. Simons
  */
-public class CausalClusterStarter {
+final class CausalClusterStarter {
 
 	private static final int DEFAULT_BOLT_PORT = 7687;
 
