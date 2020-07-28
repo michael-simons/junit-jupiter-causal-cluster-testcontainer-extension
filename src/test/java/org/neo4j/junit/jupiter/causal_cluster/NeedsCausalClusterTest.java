@@ -384,7 +384,7 @@ class NeedsCausalClusterTest {
 		@Neo4jCluster
 		Cluster cluster1;
 
-		@Neo4jUri
+		@Neo4jCluster
 		Cluster cluster2;
 
 		@Test
