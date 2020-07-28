@@ -543,5 +543,4 @@ class NeedsCausalClusterTest {
 			}
 		}
 	}
-
 }

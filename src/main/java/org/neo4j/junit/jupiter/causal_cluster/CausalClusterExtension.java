@@ -103,7 +103,7 @@ class CausalClusterExtension implements BeforeAllCallback {
 					Type collectionType = ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
 					assertSupportedType(Neo4jUri.class, "Collection<> field", collectionType,
 						String.class, URI.class);
-					field.set(testInstance, getURIs(field.getGenericType(), context));
+					field.set(testInstance, getURIs(collectionType, context));
 				} else {
 					field.set(testInstance, getURI(field.getType(), context));
 				}
