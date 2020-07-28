@@ -18,13 +18,20 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
+import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.*;
+
+import java.net.URI;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.platform.testkit.engine.EngineTestKit;
+import org.junit.platform.testkit.engine.Events;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
@@ -40,46 +47,85 @@ class NeedsCausalClusterTest {
 
 	@Nested
 	class ValidUses {
+
 		@Test
 		void shouldWorkWithIntendedUsage() {
-			EngineTestKit.engine(ENGINE_ID)
-				.selectors(selectClass(StaticFieldOnPerMethodLifecycleTest.class),
-					selectClass(InstanceFieldInPerClassLifecycleTest.class),
+			Events testEvents = EngineTestKit.engine(ENGINE_ID)
+				.selectors(
+					selectClass(StaticClusterUriFieldOnPerMethodLifecycleTest.class),
+					selectClass(StaticClusterFieldOnPerMethodLifecycleTest.class),
+					selectClass(InstanceUriFieldInPerClassLifecycleTest.class),
+					selectClass(InstanceCollectionFieldInPerClassLifecycleTest.class),
+					selectClass(InstanceClusterFieldInPerClassLifecycleTest.class),
 					selectClass(NestedClassWithAllNeededAnnotationsTest.class))
-				.execute().testEvents()
-				.assertStatistics(stats -> stats.succeeded(3).failed(0));
+				.execute().testEvents();
+
+			assertThat(testEvents.succeeded().stream().collect(Collectors.toList()))
+				.hasSize(5);
 		}
 
 		@Test
 		void shouldNotStartMultipleClusters() {
-			EngineTestKit.engine(ENGINE_ID)
-				.selectors(selectClass(MultipleInjectionPointsPerMethodLifeCycleTest.class),
-					selectClass(MultipleInjectionPointsPerClassLifeCycleTest.class))
-				.execute().testEvents()
-				.assertStatistics(stats -> stats.succeeded(2).failed(0));
+			Events testEvents = EngineTestKit.engine(ENGINE_ID)
+				.selectors(
+					selectClass(MultipleUriInjectionPointsPerMethodLifeCycleTest.class),
+					selectClass(MultipleClusterInjectionPointsPerMethodLifeCycleTest.class),
+					selectClass(MultipleInjectionPointsDifferentTypePerMethodLifeCycleTest.class),
+					selectClass(MultipleUriInjectionPointsPerClassLifeCycleTest.class),
+					selectClass(MultipleClusterInjectionPointsPerClassLifeCycleTest.class),
+					selectClass(MultipleInjectionPointsDifferentTypePerClassLifeCycleTest.class)
+				)
+				.execute().testEvents();
+
+			assertThat(testEvents.succeeded().stream().collect(Collectors.toList()))
+				.hasSize(6);
 		}
 	}
 
 	@Nested
 	class InvalidUses {
+
 		@Test
 		void shouldNotWorkWithInvalidUsage() {
-			EngineTestKit.engine(ENGINE_ID)
+			Events testEvents = EngineTestKit.engine(ENGINE_ID)
 				.selectors(
 					selectClass(MissingExtensionTest.class),
 					selectClass(MissingInjectionPoint.class),
 					selectClass(LifecyleOnOuterClass.class))
-				.execute().testEvents()
-				.assertStatistics(stats -> stats.succeeded(0).failed(3));
+				.execute().testEvents();
+
+			assertThat(testEvents.failed().stream().collect(Collectors.toList()))
+				.hasSize(3);
 		}
 
 		@Test
 		void shouldCheckTypeOfInjectionPoint() {
-			EngineTestKit.engine(ENGINE_ID)
+			Events testEvents = EngineTestKit.engine(ENGINE_ID)
 				.selectors(
-					selectClass(WrongExtensionPoint.class))
-				.execute().testEvents()
-				.assertStatistics(stats -> stats.started(0));
+					selectClass(WrongUriExtensionPoint.class),
+					selectClass(WrongUriCollectionExtensionPoint.class),
+					selectClass(WrongClusterExtensionPoint.class),
+					selectClass(MixedUpClusterExtensionPoint.class),
+					selectClass(MixedUpUriExtensionPoint.class)
+				)
+				.execute().testEvents();
+
+			assertThat(testEvents.started().stream().collect(Collectors.toList()))
+				.hasSize(0);
+		}
+	}
+
+	static void verifyConnectivity(Cluster cluster) {
+		List<String> clusterUris = cluster.getAllCores().stream()
+			.map(c -> c.getNeo4jUri().toString())
+			.collect(Collectors.toList());
+
+		verifyConnectivity(clusterUris);
+	}
+
+	static void verifyConnectivity(Collection<String> clusterUris) {
+		for (String clusterUri : clusterUris) {
+			verifyConnectivity(clusterUri);
 		}
 	}
 
@@ -87,14 +133,14 @@ class NeedsCausalClusterTest {
 
 		try (Driver driver = GraphDatabase.driver(uri, AuthTokens.basic("neo4j", "password"))) {
 			driver.verifyConnectivity();
-		} catch(Exception e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 			throw e;
 		}
 	}
 
 	@NeedsCausalCluster
-	static class StaticFieldOnPerMethodLifecycleTest {
+	static class StaticClusterUriFieldOnPerMethodLifecycleTest {
 
 		@Neo4jUri
 		static String clusterUri;
@@ -108,7 +154,21 @@ class NeedsCausalClusterTest {
 	}
 
 	@NeedsCausalCluster
-	static class MultipleInjectionPointsPerMethodLifeCycleTest {
+	static class StaticClusterFieldOnPerMethodLifecycleTest {
+
+		@Neo4jCluster
+		static Cluster cluster;
+
+		@Test
+		void aTest() {
+
+			assertNotNull(cluster);
+			verifyConnectivity(cluster);
+		}
+	}
+
+	@NeedsCausalCluster
+	static class MultipleUriInjectionPointsPerMethodLifeCycleTest {
 
 		@Neo4jUri
 		static String clusterUri1;
@@ -119,14 +179,59 @@ class NeedsCausalClusterTest {
 		@Test
 		void aTest() {
 
-			assertTrue(clusterUri1.equals(clusterUri2));
+			assertEquals(clusterUri1, clusterUri2);
 			verifyConnectivity(clusterUri1);
 		}
 	}
 
 	@NeedsCausalCluster
+	static class MultipleClusterInjectionPointsPerMethodLifeCycleTest {
+
+		@Neo4jCluster
+		static Cluster cluster1;
+
+		@Neo4jCluster
+		static Cluster cluster2;
+
+		@Test
+		void aTest() {
+
+			assertEquals(cluster1.getAllCores(), cluster2.getAllCores());
+			verifyConnectivity(cluster1);
+		}
+	}
+
+	@NeedsCausalCluster
+	static class MultipleInjectionPointsDifferentTypePerMethodLifeCycleTest {
+
+		@Neo4jUri
+		static String clusterUriString;
+
+		@Neo4jUri
+		static URI clusterUri;
+
+		@Neo4jUri
+		static List<URI> clusterUris;
+
+		@Neo4jCluster
+		static Cluster cluster;
+
+		@Test
+		void aTest() {
+
+			assertTrue(clusterUris.contains(clusterUri));
+			assertEquals(clusterUriString, clusterUri.toString());
+
+			assertThat(cluster.getAllCores().stream().map(Neo4jCore::getNeo4jUri))
+				.containsExactlyInAnyOrderElementsOf(clusterUris);
+
+			verifyConnectivity(cluster);
+		}
+	}
+
+	@NeedsCausalCluster
 	@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-	static class InstanceFieldInPerClassLifecycleTest {
+	static class InstanceUriFieldInPerClassLifecycleTest {
 
 		@Neo4jUri
 		String clusterUri;
@@ -141,7 +246,38 @@ class NeedsCausalClusterTest {
 
 	@NeedsCausalCluster
 	@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-	static class MultipleInjectionPointsPerClassLifeCycleTest {
+	static class InstanceCollectionFieldInPerClassLifecycleTest {
+
+		@Neo4jUri
+		Collection<String> clusterUris;
+
+		@Test
+		void aTest() {
+
+			assertNotNull(clusterUris);
+			assertFalse(clusterUris.isEmpty());
+			verifyConnectivity(clusterUris);
+		}
+	}
+
+	@NeedsCausalCluster
+	@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+	static class InstanceClusterFieldInPerClassLifecycleTest {
+
+		@Neo4jCluster
+		Cluster cluster;
+
+		@Test
+		void aTest() {
+
+			assertNotNull(cluster);
+			verifyConnectivity(cluster);
+		}
+	}
+
+	@NeedsCausalCluster
+	@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+	static class MultipleUriInjectionPointsPerClassLifeCycleTest {
 
 		@Neo4jUri
 		String clusterUri1;
@@ -152,8 +288,55 @@ class NeedsCausalClusterTest {
 		@Test
 		void aTest() {
 
-			assertTrue(clusterUri1.equals(clusterUri2));
+			assertEquals(clusterUri1, clusterUri2);
 			verifyConnectivity(clusterUri1);
+		}
+	}
+
+	@NeedsCausalCluster
+	@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+	static class MultipleClusterInjectionPointsPerClassLifeCycleTest {
+
+		@Neo4jCluster
+		Cluster cluster1;
+
+		@Neo4jUri
+		Cluster cluster2;
+
+		@Test
+		void aTest() {
+
+			assertEquals(cluster1.getAllCores(), cluster2.getAllCores());
+			verifyConnectivity(cluster1);
+		}
+	}
+
+	@NeedsCausalCluster
+	@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+	static class MultipleInjectionPointsDifferentTypePerClassLifeCycleTest {
+
+		@Neo4jUri
+		String clusterUriString;
+
+		@Neo4jUri
+		URI clusterUri;
+
+		@Neo4jUri
+		List<URI> clusterUris;
+
+		@Neo4jCluster
+		Cluster cluster;
+
+		@Test
+		void aTest() {
+
+			assertTrue(clusterUris.contains(clusterUri));
+			assertEquals(clusterUriString, clusterUri.toString());
+
+			assertThat(cluster.getAllCores().stream().map(Neo4jCore::getNeo4jUri))
+				.containsExactlyInAnyOrderElementsOf(clusterUris);
+
+			verifyConnectivity(cluster);
 		}
 	}
 
@@ -201,7 +384,7 @@ class NeedsCausalClusterTest {
 	}
 
 	@NeedsCausalCluster
-	static class WrongExtensionPoint {
+	static class WrongUriExtensionPoint {
 
 		@Neo4jUri
 		static Integer clusterUri;
@@ -209,6 +392,54 @@ class NeedsCausalClusterTest {
 		@Test
 		void aTest() {
 			assertNotNull(clusterUri);
+		}
+	}
+
+	@NeedsCausalCluster
+	static class WrongUriCollectionExtensionPoint {
+
+		@Neo4jUri
+		static Collection<Object> clusterUris;
+
+		@Test
+		void aTest() {
+			assertNotNull(clusterUris);
+		}
+	}
+
+	@NeedsCausalCluster
+	static class WrongClusterExtensionPoint {
+
+		@Neo4jCluster
+		static Object cluster;
+
+		@Test
+		void aTest() {
+			assertNotNull(cluster);
+		}
+	}
+
+	@NeedsCausalCluster
+	static class MixedUpClusterExtensionPoint {
+
+		@Neo4jUri
+		static Cluster clusterUri;
+
+		@Test
+		void aTest() {
+			assertNotNull(clusterUri);
+		}
+	}
+
+	@NeedsCausalCluster
+	static class MixedUpUriExtensionPoint {
+
+		@Neo4jCluster
+		static URI cluster;
+
+		@Test
+		void aTest() {
+			assertNotNull(cluster);
 		}
 	}
 

@@ -2,9 +2,11 @@ package org.neo4j.junit.jupiter.causal_cluster;
 
 import static java.util.stream.Collectors.*;
 
+import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.IntStream;
 
 import org.testcontainers.containers.Neo4jContainer;
 import org.testcontainers.containers.Network;
@@ -51,7 +53,7 @@ final class CausalClusterFactory {
 
 		final boolean is35 = configuration.getNeo4jVersion().startsWith("3.5");
 		// Build the cluster
-		final List<Neo4jContainer> cluster = configuration.iterateCoreMembers()
+		final List<Neo4jContainer<?>> cluster = configuration.iterateCoreMembers()
 			.map(member -> new Neo4jContainer<>(configuration.getImageName())
 				.withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
 				.withAdminPassword(configuration.getPassword())
@@ -90,6 +92,21 @@ final class CausalClusterFactory {
 			e.printStackTrace();
 		}
 
-		return new CausalCluster(boltProxy, DEFAULT_BOLT_PORT, cluster);
+		List<Integer> boltPorts = configuration.iterateCoreMembers().map(entry -> DEFAULT_BOLT_PORT + entry.getKey())
+			.collect(toList());
+
+		List<Neo4jCore> neo4jCores = IntStream.range(0, cluster.size())
+			.mapToObj(idx -> new Neo4jCore(cluster.get(idx), getNeo4jUri(boltPorts.get(idx))))
+			.collect(toList());
+
+		return new CausalCluster(boltProxy, boltPorts, neo4jCores);
+	}
+
+	private URI getNeo4jUri(int boltPort) {
+		return URI.create(String.format(
+			"neo4j://%s:%d",
+			boltProxy.getContainerIpAddress(),
+			boltProxy.getMappedPort(boltPort)
+		));
 	}
 }

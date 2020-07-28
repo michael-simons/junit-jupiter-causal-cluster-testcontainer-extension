@@ -20,9 +20,15 @@ package org.neo4j.junit.jupiter.causal_cluster;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.net.URI;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionConfigurationException;
@@ -53,6 +59,9 @@ class CausalClusterExtension implements BeforeAllCallback {
 
 	private static final String KEY_CONFIG = "config";
 	private static final String KEY = "neo4j.causalCluster";
+
+	private static final Class[] URI_FIELD_SUPPORTED_CLASSES = { URI.class, String.class, Collection.class,
+		List.class };
 
 	private static final Configuration DEFAULT_CONFIGURATION = new Configuration(DEFAULT_NEO4J_VERSION,
 		DEFAULT_NUMBER_OF_CORE_MEMBERS,
@@ -86,33 +95,97 @@ class CausalClusterExtension implements BeforeAllCallback {
 
 		AnnotationSupport.findAnnotatedFields(context.getRequiredTestClass(), Neo4jUri.class, selectedFields,
 			HierarchyTraversalMode.TOP_DOWN).forEach(field -> {
-			assertSupportedType("field", field.getType());
+			assertSupportedType(Neo4jUri.class, "field", field.getType(), URI_FIELD_SUPPORTED_CLASSES);
 			field.setAccessible(true);
 			try {
-				field.set(testInstance, createCausalCluster(field.getType(), context));
+				if (Collection.class.isAssignableFrom(field.getType())) {
+					Type collectionType = ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
+					assertSupportedType(Neo4jUri.class, "Collection<> field", collectionType,
+						String.class, URI.class);
+					field.set(testInstance, getURIs(field.getGenericType(), context));
+				} else {
+					field.set(testInstance, getURI(field.getType(), context));
+				}
+			} catch (IllegalAccessException e) {
+				throw new RuntimeException(e);
+			}
+		});
+
+		AnnotationSupport.findAnnotatedFields(context.getRequiredTestClass(), Neo4jCluster.class, selectedFields,
+			HierarchyTraversalMode.TOP_DOWN).forEach(field -> {
+			assertSupportedType(Neo4jCluster.class, "field", field.getType(), Cluster.class);
+			field.setAccessible(true);
+			try {
+				if (field.get(testInstance) != null) {
+					throw new IllegalStateException("Cluster field must be null");
+				}
+				field.set(testInstance, getCausalCluster(context));
 			} catch (IllegalAccessException e) {
 				throw new RuntimeException(e);
 			}
 		});
 	}
 
-	private static void assertSupportedType(String target, Class<?> type) {
-		if (type != URI.class && type != String.class) {
-			throw new ExtensionConfigurationException(String
-				.format("Can only resolve @%s %s of type %s or %s but was: %s", Neo4jUri.class.getSimpleName(), target,
-					URI.class.getName(), String.class.getName(), type.getName()));
+	private static void assertSupportedType(Class<?> annotation, String target, Type type,
+		Class<?>... supportedTypes) {
+
+		if (Arrays.stream(supportedTypes).noneMatch(t -> type == t)) {
+			String typeName = type.getTypeName();
+			throw getExtensionConfigurationException(annotation, target, typeName, supportedTypes);
 		}
 	}
 
-	private static Object createCausalCluster(Class<?> type, ExtensionContext extensionContext) {
+	private static void assertSupportedType(Class<?> annotation, String target, Class<?> type,
+		Class<?>... supportedTypes) {
+
+		if (Arrays.stream(supportedTypes).noneMatch(t -> type == t)) {
+			String typeName = type.getName();
+			throw getExtensionConfigurationException(annotation, target, typeName, supportedTypes);
+		}
+	}
+
+	private static ExtensionConfigurationException getExtensionConfigurationException(
+		Class<?> annotation, String target, String typeName, Class<?>[] supportedTypes
+	) {
+
+		String supportedTypesString = Arrays.stream(supportedTypes)
+			.map(Class::toString)
+			.collect(Collectors.joining(" or "));
+
+		String message = String.format(
+			"Can only resolve @%s %s of type %s but was: %s",
+			annotation.getSimpleName(),
+			target,
+			supportedTypesString,
+			typeName);
+
+		return new ExtensionConfigurationException(message);
+	}
+
+	private static CausalCluster createCausalCluster(ExtensionContext extensionContext) {
 
 		ExtensionContext.Store store = extensionContext.getStore(NAMESPACE);
 		Configuration configuration = store
 			.getOrComputeIfAbsent(KEY_CONFIG, key -> DEFAULT_CONFIGURATION, Configuration.class);
 
-		URI uri = extensionContext.getStore(NAMESPACE)
-			.getOrComputeIfAbsent(KEY, key -> new CausalClusterFactory(configuration).start(), CausalCluster.class).getURI();
+		return extensionContext.getStore(NAMESPACE)
+			.getOrComputeIfAbsent(KEY, key -> new CausalClusterFactory(configuration).start(), CausalCluster.class);
+	}
 
+	private static Object getURI(Class<?> type, ExtensionContext extensionContext) {
+
+		URI uri = createCausalCluster(extensionContext).getURI();
 		return type == URI.class ? uri : uri.toString();
+	}
+
+	private static Object getURIs(Type collectionType, ExtensionContext extensionContext) {
+
+		List<URI> uris = createCausalCluster(extensionContext).getURIs();
+		return collectionType == URI.class ? uris : uris.stream().map(URI::toString).collect(Collectors.toList());
+	}
+
+	private static Object getCausalCluster(ExtensionContext extensionContext) {
+
+		return createCausalCluster(extensionContext);
 	}
 }
