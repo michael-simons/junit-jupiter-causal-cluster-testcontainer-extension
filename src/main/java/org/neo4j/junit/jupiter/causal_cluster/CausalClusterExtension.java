@@ -98,6 +98,7 @@ class CausalClusterExtension implements BeforeAllCallback {
 			assertSupportedType(Neo4jUri.class, "field", field.getType(), URI_FIELD_SUPPORTED_CLASSES);
 			field.setAccessible(true);
 			try {
+				assertFieldIsNull(Neo4jUri.class, testInstance, field);
 				if (Collection.class.isAssignableFrom(field.getType())) {
 					Type collectionType = ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
 					assertSupportedType(Neo4jUri.class, "Collection<> field", collectionType,
@@ -116,9 +117,7 @@ class CausalClusterExtension implements BeforeAllCallback {
 			assertSupportedType(Neo4jCluster.class, "field", field.getType(), Cluster.class);
 			field.setAccessible(true);
 			try {
-				if (field.get(testInstance) != null) {
-					throw new IllegalStateException("Cluster field must be null");
-				}
+				assertFieldIsNull(Neo4jCluster.class, testInstance, field);
 				field.set(testInstance, getCausalCluster(context));
 			} catch (IllegalAccessException e) {
 				throw new RuntimeException(e);
@@ -141,6 +140,15 @@ class CausalClusterExtension implements BeforeAllCallback {
 		if (Arrays.stream(supportedTypes).noneMatch(t -> type == t)) {
 			String typeName = type.getName();
 			throw getExtensionConfigurationException(annotation, target, typeName, supportedTypes);
+		}
+	}
+
+	private static void assertFieldIsNull(Class<?> annotation, Object testInstance, Field field)
+		throws IllegalAccessException {
+		if (field.get(testInstance) != null) {
+			throw new IllegalStateException(String.format(
+				"Fields annotated with @%s must be null", annotation.getName()
+			));
 		}
 	}
 
