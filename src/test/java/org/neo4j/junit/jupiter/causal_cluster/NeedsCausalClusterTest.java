@@ -166,13 +166,13 @@ class NeedsCausalClusterTest {
 	@NeedsCausalCluster
 	static class StaticCollectionFieldOnPerMethodLifecycleTest {
 
-		@Neo4jUri
+		@CausalCluster
 		static Collection<String> clusterUris;
 
 		@Test
 		void aTest() {
 
-			assertNotNull(clusterUris);
+			assertThat(clusterUris).isNotNull();
 			assertThat(clusterUris).isNotEmpty();
 			verifyConnectivity(clusterUris);
 		}
