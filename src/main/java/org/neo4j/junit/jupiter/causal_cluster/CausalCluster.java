@@ -29,15 +29,15 @@ import java.lang.annotation.Target;
  * The cluster will be started before all tests and be shutdown, including all servers, after the test.
  * The following list shows valid injection points:
  * <dl>
- *     <dt><pre>@CausalCluster String uri</pre></dt>
+ *     <dt><code>@CausalCluster String uri</code></dt>
  *     <dd>Injects a random, externally accessible URI as a {@link String}.</dd>
- *     <dt><pre>@CausalCluster URI uri</pre></dt>
+ *     <dt><code>@CausalCluster URI uri</code></dt>
  *     <dd>Injects a random, externally accessible URI as an {@link java.net.URI}.</dd>
- *     <dt><pre>@CausalCluster List&lt;String&gt; uris</pre></dt>
+ *     <dt><code>@CausalCluster List&lt;String&gt; uris</code></dt>
  *     <dd>Injects all externally accessible URIs as {@link String strings}</dd>
- *     <dt><pre>@CausalCluster List&lt;URI&gt; uris</pre></dt>
+ *     <dt><code>@CausalCluster List&lt;URI&gt; uris</code></dt>
  *     <dd>Injects all externally accessible URIs as {@link java.net.URI uris}</dd>
- *     <dt><pre>@CausalCluster Cluster cluster</pre></dt>
+ *     <dt><code>@CausalCluster Cluster cluster</code></dt>
  *     <dd>Injects the complete cluster for advanced tests as {@link Cluster}</dd>
  * </dl>
  *
