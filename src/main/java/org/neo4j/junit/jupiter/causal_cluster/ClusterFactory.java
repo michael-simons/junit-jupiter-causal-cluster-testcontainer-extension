@@ -32,11 +32,12 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
 /**
- * This takes care of all the containers started.
+ * Creates new cluster instances.
  *
  * @author Michael J. Simons
+ * @author Andrew Jefferson
  */
-final class CausalClusterFactory {
+final class ClusterFactory {
 
 	private static final int DEFAULT_BOLT_PORT = 7687;
 
@@ -44,11 +45,11 @@ final class CausalClusterFactory {
 
 	private SocatContainer boltProxy;
 
-	CausalClusterFactory(Configuration configuration) {
+	ClusterFactory(Configuration configuration) {
 		this.configuration = configuration;
 	}
 
-	CausalCluster start() {
+	Cluster createCluster() {
 
 		final int numberOfCoreMembers = configuration.getNumberOfCoreMembers();
 
@@ -115,7 +116,7 @@ final class CausalClusterFactory {
 			.mapToObj(idx -> new DefaultServer(cluster.get(idx), getNeo4jUri(DEFAULT_BOLT_PORT + idx)))
 			.collect(toList());
 
-		return new DefaultCausalCluster(boltProxy, neo4jCores);
+		return new DefaultCluster(boltProxy, neo4jCores);
 	}
 
 	private URI getNeo4jUri(int boltPort) {

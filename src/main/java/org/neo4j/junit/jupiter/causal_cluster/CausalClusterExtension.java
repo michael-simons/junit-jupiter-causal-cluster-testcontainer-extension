@@ -18,13 +18,6 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import org.junit.jupiter.api.extension.BeforeAllCallback;
-import org.junit.jupiter.api.extension.ExtensionConfigurationException;
-import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.api.extension.TestInstances;
-import org.junit.platform.commons.support.AnnotationSupport;
-import org.junit.platform.commons.support.HierarchyTraversalMode;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
@@ -34,11 +27,19 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.ExtensionConfigurationException;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.TestInstances;
+import org.junit.platform.commons.support.AnnotationSupport;
+import org.junit.platform.commons.support.HierarchyTraversalMode;
+
 /**
- * Provides exactly one instance of {@link CausalCluster}.
+ * Provides exactly one instance of {@link Cluster}.
  *
  * @author Michael J. Simons
  */
@@ -61,7 +62,7 @@ class CausalClusterExtension implements BeforeAllCallback {
 	private static final String KEY = "neo4j.causalCluster";
 
 	private static final Class[] URI_FIELD_SUPPORTED_CLASSES = { URI.class, String.class, Collection.class,
-		List.class };
+		List.class, Cluster.class };
 
 	private static final Configuration DEFAULT_CONFIGURATION = new Configuration(DEFAULT_NEO4J_VERSION,
 		DEFAULT_NUMBER_OF_CORE_MEMBERS,
@@ -93,32 +94,20 @@ class CausalClusterExtension implements BeforeAllCallback {
 			selectedFields = field -> Modifier.isStatic(field.getModifiers());
 		}
 
-		AnnotationSupport.findAnnotatedFields(context.getRequiredTestClass(), Neo4jUri.class, selectedFields,
+		AnnotationSupport.findAnnotatedFields(context.getRequiredTestClass(), CausalCluster.class, selectedFields,
 			HierarchyTraversalMode.TOP_DOWN).forEach(field -> {
-			assertSupportedType(Neo4jUri.class, "field", field.getType(), URI_FIELD_SUPPORTED_CLASSES);
+			assertSupportedType(CausalCluster.class, "field", field.getType(), URI_FIELD_SUPPORTED_CLASSES);
 			field.setAccessible(true);
 			try {
-				assertFieldIsNull(Neo4jUri.class, testInstance, field);
+				assertFieldIsNull(CausalCluster.class, testInstance, field);
 				if (Collection.class.isAssignableFrom(field.getType())) {
 					Type collectionType = ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
-					assertSupportedType(Neo4jUri.class, "Collection<> field", collectionType,
+					assertSupportedType(CausalCluster.class, "Collection<> field", collectionType,
 						String.class, URI.class);
 					field.set(testInstance, getURIs(collectionType, context));
 				} else {
-					field.set(testInstance, getURI(field.getType(), context));
+					field.set(testInstance, getInjectableValue(field.getType(), context));
 				}
-			} catch (IllegalAccessException e) {
-				throw new RuntimeException(e);
-			}
-		});
-
-		AnnotationSupport.findAnnotatedFields(context.getRequiredTestClass(), Neo4jCluster.class, selectedFields,
-			HierarchyTraversalMode.TOP_DOWN).forEach(field -> {
-			assertSupportedType(Neo4jCluster.class, "field", field.getType(), CausalCluster.class);
-			field.setAccessible(true);
-			try {
-				assertFieldIsNull(Neo4jCluster.class, testInstance, field);
-				field.set(testInstance, getOrCreateCausalCluster(context));
 			} catch (IllegalAccessException e) {
 				throw new RuntimeException(e);
 			}
@@ -170,25 +159,33 @@ class CausalClusterExtension implements BeforeAllCallback {
 		return new ExtensionConfigurationException(message);
 	}
 
-	private static CausalCluster getOrCreateCausalCluster(ExtensionContext extensionContext) {
+	private static Cluster getOrCreateCausalCluster(ExtensionContext extensionContext) {
 
 		ExtensionContext.Store store = extensionContext.getStore(NAMESPACE);
 		Configuration configuration = store
 			.getOrComputeIfAbsent(KEY_CONFIG, key -> DEFAULT_CONFIGURATION, Configuration.class);
 
 		return extensionContext.getStore(NAMESPACE)
-			.getOrComputeIfAbsent(KEY, key -> new CausalClusterFactory(configuration).start(), CausalCluster.class);
+			.getOrComputeIfAbsent(KEY, key -> new ClusterFactory(configuration).createCluster(), Cluster.class);
 	}
 
-	private static Object getURI(Class<?> type, ExtensionContext extensionContext) {
+	private static Object getInjectableValue(Class<?> type, ExtensionContext extensionContext) {
 
-		URI uri = getOrCreateCausalCluster(extensionContext).getURI();
-		return type == URI.class ? uri : uri.toString();
+		Cluster cluster = getOrCreateCausalCluster(extensionContext);
+		if (type == Cluster.class) {
+			return cluster;
+		} else {
+			URI uri = cluster.getURI();
+			return type == URI.class ? uri : uri.toString();
+		}
 	}
 
 	private static Object getURIs(Type collectionType, ExtensionContext extensionContext) {
 
-		List<URI> uris = ((DefaultCausalCluster)getOrCreateCausalCluster(extensionContext)).getURIs();
-		return collectionType == URI.class ? uris : uris.stream().map(URI::toString).collect(Collectors.toList());
+		Function<Server, ?> serverToURI = ((Function<Server, URI>) (Server::getURI))
+			.andThen(collectionType == URI.class ? Function.identity() : URI::toString);
+		return getOrCreateCausalCluster(extensionContext).getAllServers().stream()
+			.map(serverToURI)
+			.collect(Collectors.toList());
 	}
 }

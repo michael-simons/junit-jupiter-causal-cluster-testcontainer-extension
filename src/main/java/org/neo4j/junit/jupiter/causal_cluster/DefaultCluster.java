@@ -27,17 +27,15 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static java.util.stream.Collectors.toList;
-
 /**
  * @author Michael J. Simons
  */
-final class DefaultCausalCluster implements CausalCluster, CloseableResource {
+final class DefaultCluster implements Cluster, CloseableResource {
 
 	private final SocatContainer boltProxy;
 	private final List<DefaultServer> servers;
 
-	DefaultCausalCluster(SocatContainer boltProxy, List<DefaultServer> servers) {
+	DefaultCluster(SocatContainer boltProxy, List<DefaultServer> servers) {
 
 		this.boltProxy = boltProxy;
 		this.servers = servers;
@@ -48,10 +46,6 @@ final class DefaultCausalCluster implements CausalCluster, CloseableResource {
 		// Choose a random bolt port from the available ports
 		DefaultServer core = servers.get(ThreadLocalRandom.current().nextInt(0, servers.size()));
 		return core.getURI();
-	}
-
-	List<URI> getURIs() {
-		return servers.stream().map(DefaultServer::getURI).collect(toList());
 	}
 
 	@Override

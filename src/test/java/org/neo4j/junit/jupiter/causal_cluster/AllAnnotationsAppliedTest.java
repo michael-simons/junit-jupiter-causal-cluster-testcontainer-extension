@@ -35,26 +35,26 @@ import org.testcontainers.containers.Neo4jContainer;
 @NeedsCausalCluster
 public class AllAnnotationsAppliedTest {
 
-	@Neo4jUri
+	@CausalCluster
 	static String clusterUriString;
 
-	@Neo4jUri
+	@CausalCluster
 	static URI clusterUri;
 
-	@Neo4jUri
+	@CausalCluster
 	static List<String> clusterUriListOfStrings;
 
-	@Neo4jUri
+	@CausalCluster
 	static Collection<String> clusterUriCollectionOfStrings;
 
-	@Neo4jUri
+	@CausalCluster
 	static List<URI> clusterUriListOfURIs;
 
-	@Neo4jUri
+	@CausalCluster
 	static Collection<URI> clusterUriCollectionOfURIs;
 
-	@Neo4jCluster
-	static CausalCluster cluster;
+	@CausalCluster
+	static Cluster cluster;
 
 	@Test
 	void nothingIsNull() {
@@ -107,7 +107,7 @@ public class AllAnnotationsAppliedTest {
 		assertThat(clusterUriListOfURIs.get(0)).isInstanceOf(URI.class);
 		assertThat(clusterUriListOfStrings.get(0)).isInstanceOf(String.class);
 
-		assertThat(cluster).isInstanceOf(CausalCluster.class);
+		assertThat(cluster).isInstanceOf(Cluster.class);
 	}
 
 	@Test

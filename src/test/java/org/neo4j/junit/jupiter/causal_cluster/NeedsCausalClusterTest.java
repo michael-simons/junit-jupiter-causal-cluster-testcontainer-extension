@@ -115,9 +115,7 @@ class NeedsCausalClusterTest {
 				.selectors(
 					selectClass(WrongUriExtensionPoint.class),
 					selectClass(WrongUriCollectionExtensionPoint.class),
-					selectClass(WrongClusterExtensionPoint.class),
-					selectClass(MixedUpClusterExtensionPoint.class),
-					selectClass(MixedUpUriExtensionPoint.class)
+					selectClass(WrongClusterExtensionPoint.class)
 				)
 				.execute().testEvents();
 
@@ -126,7 +124,7 @@ class NeedsCausalClusterTest {
 		}
 	}
 
-	static void verifyConnectivity(CausalCluster cluster) {
+	static void verifyConnectivity(Cluster cluster) {
 		List<String> clusterUris = cluster.getAllServers().stream()
 			.map(c -> c.getURI().toString())
 			.collect(Collectors.toList());
@@ -153,7 +151,7 @@ class NeedsCausalClusterTest {
 	@NeedsCausalCluster
 	static class StaticClusterUriFieldOnPerMethodLifecycleTest {
 
-		@Neo4jUri
+		@CausalCluster
 		static String clusterUri;
 
 		@Test
@@ -167,8 +165,8 @@ class NeedsCausalClusterTest {
 	@NeedsCausalCluster
 	static class StaticClusterFieldOnPerMethodLifecycleTest {
 
-		@Neo4jCluster
-		static CausalCluster cluster;
+		@CausalCluster
+		static Cluster cluster;
 
 		@Test
 		void aTest() {
@@ -181,22 +179,22 @@ class NeedsCausalClusterTest {
 	@NeedsCausalCluster
 	static class MultipleUriInjectionPointsPerMethodLifeCycleTest {
 
-		@Neo4jUri
+		@CausalCluster
 		static String clusterUri1;
 
-		@Neo4jUri
+		@CausalCluster
 		static String clusterUri2;
 
-		@Neo4jUri
+		@CausalCluster
 		static String clusterUri3;
 
-		@Neo4jUri
+		@CausalCluster
 		static String clusterUri4;
 
-		@Neo4jUri
+		@CausalCluster
 		static String clusterUri5;
 
-		@Neo4jUri
+		@CausalCluster
 		static String clusterUri6;
 
 		@Test
@@ -216,10 +214,10 @@ class NeedsCausalClusterTest {
 	@NeedsCausalCluster
 	static class MultipleCollectionInjectionPointsPerMethodLifeCycleTest {
 
-		@Neo4jUri
+		@CausalCluster
 		static Collection<String> clusterUris1;
 
-		@Neo4jUri
+		@CausalCluster
 		static Collection<String> clusterUris2;
 
 		@Test
@@ -233,11 +231,11 @@ class NeedsCausalClusterTest {
 	@NeedsCausalCluster
 	static class MultipleClusterInjectionPointsPerMethodLifeCycleTest {
 
-		@Neo4jCluster
-		static CausalCluster cluster1;
+		@CausalCluster
+		static Cluster cluster1;
 
-		@Neo4jCluster
-		static CausalCluster cluster2;
+		@CausalCluster
+		static Cluster cluster2;
 
 		@Test
 		void aTest() {
@@ -250,17 +248,17 @@ class NeedsCausalClusterTest {
 	@NeedsCausalCluster
 	static class MultipleInjectionPointsDifferentTypePerMethodLifeCycleTest {
 
-		@Neo4jUri
+		@CausalCluster
 		static String clusterUriString;
 
-		@Neo4jUri
+		@CausalCluster
 		static URI clusterUri;
 
-		@Neo4jUri
+		@CausalCluster
 		static List<URI> clusterUris;
 
-		@Neo4jCluster
-		static CausalCluster cluster;
+		@CausalCluster
+		static Cluster cluster;
 
 		@Test
 		void aTest() throws URISyntaxException {
@@ -279,7 +277,7 @@ class NeedsCausalClusterTest {
 	@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 	static class InstanceUriFieldInPerClassLifecycleTest {
 
-		@Neo4jUri
+		@CausalCluster
 		String clusterUri;
 
 		@Test
@@ -294,7 +292,7 @@ class NeedsCausalClusterTest {
 	@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 	static class InstanceCollectionFieldInPerClassLifecycleTest {
 
-		@Neo4jUri
+		@CausalCluster
 		Collection<String> clusterUris;
 
 		@Test
@@ -311,8 +309,8 @@ class NeedsCausalClusterTest {
 	@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 	static class InstanceClusterFieldInPerClassLifecycleTest {
 
-		@Neo4jCluster
-		CausalCluster cluster;
+		@CausalCluster
+		Cluster cluster;
 
 		@Test
 		void aTest() {
@@ -326,22 +324,22 @@ class NeedsCausalClusterTest {
 	@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 	static class MultipleUriInjectionPointsPerClassLifeCycleTest {
 
-		@Neo4jUri
+		@CausalCluster
 		String clusterUri1;
 
-		@Neo4jUri
+		@CausalCluster
 		String clusterUri2;
 
-		@Neo4jUri
+		@CausalCluster
 		String clusterUri3;
 
-		@Neo4jUri
+		@CausalCluster
 		String clusterUri4;
 
-		@Neo4jUri
+		@CausalCluster
 		String clusterUri5;
 
-		@Neo4jUri
+		@CausalCluster
 		String clusterUri6;
 
 		@Test
@@ -361,10 +359,10 @@ class NeedsCausalClusterTest {
 	@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 	static class MultipleCollectionInjectionPointsPerClassLifeCycleTest {
 
-		@Neo4jUri
+		@CausalCluster
 		Collection<String> clusterUris1;
 
-		@Neo4jUri
+		@CausalCluster
 		Collection<String> clusterUris2;
 
 		@Test
@@ -379,11 +377,11 @@ class NeedsCausalClusterTest {
 	@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 	static class MultipleClusterInjectionPointsPerClassLifeCycleTest {
 
-		@Neo4jCluster
-		CausalCluster cluster1;
+		@CausalCluster
+		Cluster cluster1;
 
-		@Neo4jCluster
-		CausalCluster cluster2;
+		@CausalCluster
+		Cluster cluster2;
 
 		@Test
 		void aTest() {
@@ -397,17 +395,17 @@ class NeedsCausalClusterTest {
 	@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 	static class MultipleInjectionPointsDifferentTypePerClassLifeCycleTest {
 
-		@Neo4jUri
+		@CausalCluster
 		String clusterUriString;
 
-		@Neo4jUri
+		@CausalCluster
 		URI clusterUri;
 
-		@Neo4jUri
+		@CausalCluster
 		List<URI> clusterUris;
 
-		@Neo4jCluster
-		CausalCluster cluster;
+		@CausalCluster
+		Cluster cluster;
 
 		@Test
 		void aTest() throws URISyntaxException {
@@ -429,7 +427,7 @@ class NeedsCausalClusterTest {
 		@NeedsCausalCluster
 		class NestedTest {
 
-			@Neo4jUri
+			@CausalCluster
 			String clusterUri;
 
 			@Test
@@ -445,7 +443,7 @@ class NeedsCausalClusterTest {
 
 	static class MissingExtensionTest {
 
-		@Neo4jUri
+		@CausalCluster
 		static String clusterUri;
 
 		@Test
@@ -468,7 +466,7 @@ class NeedsCausalClusterTest {
 	@NeedsCausalCluster
 	static class WrongUriExtensionPoint {
 
-		@Neo4jUri
+		@CausalCluster
 		static Integer clusterUri;
 
 		@Test
@@ -480,7 +478,7 @@ class NeedsCausalClusterTest {
 	@NeedsCausalCluster
 	static class WrongUriCollectionExtensionPoint {
 
-		@Neo4jUri
+		@CausalCluster
 		static Collection<Object> clusterUris;
 
 		@Test
@@ -492,32 +490,8 @@ class NeedsCausalClusterTest {
 	@NeedsCausalCluster
 	static class WrongClusterExtensionPoint {
 
-		@Neo4jCluster
+		@CausalCluster
 		static Object cluster;
-
-		@Test
-		void aTest() {
-			assertThat(cluster).isNotNull();
-		}
-	}
-
-	@NeedsCausalCluster
-	static class MixedUpClusterExtensionPoint {
-
-		@Neo4jUri
-		static CausalCluster clusterUri;
-
-		@Test
-		void aTest() {
-			assertThat(clusterUri).isNotNull();
-		}
-	}
-
-	@NeedsCausalCluster
-	static class MixedUpUriExtensionPoint {
-
-		@Neo4jCluster
-		static URI cluster;
 
 		@Test
 		void aTest() {
@@ -532,7 +506,7 @@ class NeedsCausalClusterTest {
 		@NeedsCausalCluster
 		class NestedTest {
 
-			@Neo4jUri
+			@CausalCluster
 			String clusterUri;
 
 			@Test

@@ -18,20 +18,24 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.net.URI;
+import java.util.Set;
 
 /**
- * Marks a field of type {@link java.lang.String} or {@link java.net.URI} as injectable with the URI of a Neo4j causal cluster
- * that is startup before all tests and shutdown afterwards.
+ * This allows us to interact with a Neo4j Causal Cluster.
  *
  * @author Michael J. Simons
+ * @author Andrew Jefferson
  */
-@Target({ ElementType.FIELD })
-@Retention(RetentionPolicy.RUNTIME)
-@Documented
-public @interface Neo4jUri {
+public interface Cluster {
+
+	/**
+	 * @return An URI into this cluster.
+	 */
+	URI getURI();
+
+	/**
+	 * @return The Neo4j servers contained by this cluster.
+	 */
+	Set<Server> getAllServers();
 }

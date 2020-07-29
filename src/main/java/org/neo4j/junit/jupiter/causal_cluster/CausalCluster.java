@@ -18,24 +18,34 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import java.net.URI;
-import java.util.Set;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * This allows us to interact with a Neo4j Causal Cluster.
+ * Marks a field as an injection point for a Neo4j Causal Cluster.
+ * The cluster will be started before all tests and be shutdown, including all servers, after the test.
+ * The following list shows valid injection points:
+ * <dl>
+ *     <dt><pre>@CausalCluster String uri</pre></dt>
+ *     <dd>Injects a random, externally accessible URI as a {@link String}.</dd>
+ *     <dt><pre>@CausalCluster URI uri</pre></dt>
+ *     <dd>Injects a random, externally accessible URI as an {@link java.net.URI}.</dd>
+ *     <dt><pre>@CausalCluster List&lt;String&gt; uris</pre></dt>
+ *     <dd>Injects all externally accessible URIs as {@link String strings}</dd>
+ *     <dt><pre>@CausalCluster List&lt;URI&gt; uris</pre></dt>
+ *     <dd>Injects all externally accessible URIs as {@link java.net.URI uris}</dd>
+ *     <dt><pre>@CausalCluster Cluster cluster</pre></dt>
+ *     <dd>Injects the complete cluster for advanced tests as {@link Cluster}</dd>
+ * </dl>
  *
- * @author Andrew Jefferson
  * @author Michael J. Simons
+ * @author Andrew Jefferson
  */
-public interface CausalCluster {
-
-	/**
-	 * @return An URI into this cluster.
-	 */
-	URI getURI();
-
-	/**
-	 * @return The Neo4j servers contained by this cluster.
-	 */
-	Set<Server> getAllServers();
+@Target({ ElementType.FIELD })
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface CausalCluster {
 }
