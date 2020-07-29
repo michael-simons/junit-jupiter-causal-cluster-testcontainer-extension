@@ -18,25 +18,26 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.junit.platform.engine.discovery.DiscoverySelectors.*;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.platform.testkit.engine.EngineTestKit;
 import org.junit.platform.testkit.engine.Events;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 
 /**
  * Testing the test.
@@ -116,6 +117,8 @@ class NeedsCausalClusterTest {
 				.selectors(
 					selectClass(WrongUriExtensionPoint.class),
 					selectClass(WrongUriCollectionExtensionPoint.class),
+					selectClass(WrongCollectionSubclass1ExtensionPoint.class),
+					selectClass(WrongCollectionSubclass2ExtensionPoint.class),
 					selectClass(WrongClusterExtensionPoint.class)
 				)
 				.execute().testEvents();
@@ -125,7 +128,7 @@ class NeedsCausalClusterTest {
 		}
 	}
 
-	static void verifyConnectivity(Cluster cluster) {
+	static void verifyConnectivity(Neo4jCluster cluster) {
 		List<String> clusterUris = cluster.getAllServers().stream()
 			.map(c -> c.getURI().toString())
 			.collect(Collectors.toList());
@@ -182,7 +185,7 @@ class NeedsCausalClusterTest {
 	static class StaticClusterFieldOnPerMethodLifecycleTest {
 
 		@CausalCluster
-		static Cluster cluster;
+		static Neo4jCluster cluster;
 
 		@Test
 		void aTest() {
@@ -248,10 +251,10 @@ class NeedsCausalClusterTest {
 	static class MultipleClusterInjectionPointsPerMethodLifeCycleTest {
 
 		@CausalCluster
-		static Cluster cluster1;
+		static Neo4jCluster cluster1;
 
 		@CausalCluster
-		static Cluster cluster2;
+		static Neo4jCluster cluster2;
 
 		@Test
 		void aTest() {
@@ -274,7 +277,7 @@ class NeedsCausalClusterTest {
 		static List<URI> clusterUris;
 
 		@CausalCluster
-		static Cluster cluster;
+		static Neo4jCluster cluster;
 
 		@Test
 		void aTest() throws URISyntaxException {
@@ -282,7 +285,7 @@ class NeedsCausalClusterTest {
 			assertThat(clusterUris).containsOnlyOnce(clusterUri);
 			assertThat(clusterUris).containsOnlyOnce(new URI(clusterUriString));
 
-			assertThat(cluster.getAllServers().stream().map(Server::getURI))
+			assertThat(cluster.getAllServers().stream().map(Neo4jServer::getURI))
 				.containsExactlyInAnyOrderElementsOf(clusterUris);
 
 			verifyConnectivity(cluster);
@@ -326,7 +329,7 @@ class NeedsCausalClusterTest {
 	static class InstanceClusterFieldInPerClassLifecycleTest {
 
 		@CausalCluster
-		Cluster cluster;
+		Neo4jCluster cluster;
 
 		@Test
 		void aTest() {
@@ -394,10 +397,10 @@ class NeedsCausalClusterTest {
 	static class MultipleClusterInjectionPointsPerClassLifeCycleTest {
 
 		@CausalCluster
-		Cluster cluster1;
+		Neo4jCluster cluster1;
 
 		@CausalCluster
-		Cluster cluster2;
+		Neo4jCluster cluster2;
 
 		@Test
 		void aTest() {
@@ -421,7 +424,7 @@ class NeedsCausalClusterTest {
 		List<URI> clusterUris;
 
 		@CausalCluster
-		Cluster cluster;
+		Neo4jCluster cluster;
 
 		@Test
 		void aTest() throws URISyntaxException {
@@ -429,7 +432,7 @@ class NeedsCausalClusterTest {
 			assertThat(clusterUris).containsOnlyOnce(clusterUri);
 			assertThat(clusterUris).containsOnlyOnce(new URI(clusterUriString));
 
-			assertThat(cluster.getAllServers().stream().map(Server::getURI))
+			assertThat(cluster.getAllServers().stream().map(Neo4jServer::getURI))
 				.containsExactlyInAnyOrderElementsOf(clusterUris);
 
 			verifyConnectivity(cluster);
@@ -496,6 +499,30 @@ class NeedsCausalClusterTest {
 
 		@CausalCluster
 		static Collection<Object> clusterUris;
+
+		@Test
+		void aTest() {
+			assertThat(clusterUris).isNotNull();
+		}
+	}
+
+	@NeedsCausalCluster
+	static class WrongCollectionSubclass1ExtensionPoint {
+
+		@CausalCluster
+		static Set<URI> clusterUris;
+
+		@Test
+		void aTest() {
+			assertThat(clusterUris).isNotNull();
+		}
+	}
+
+	@NeedsCausalCluster
+	static class WrongCollectionSubclass2ExtensionPoint {
+
+		@CausalCluster
+		static ArrayList<URI> clusterUris;
 
 		@Test
 		void aTest() {

@@ -37,8 +37,8 @@ import java.lang.annotation.Target;
  *     <dd>Injects all externally accessible URIs as {@link String strings}</dd>
  *     <dt><code>@CausalCluster List&lt;URI&gt; uris</code></dt>
  *     <dd>Injects all externally accessible URIs as {@link java.net.URI uris}</dd>
- *     <dt><code>@CausalCluster Cluster cluster</code></dt>
- *     <dd>Injects the complete cluster for advanced tests as {@link Cluster}</dd>
+ *     <dt><code>@CausalCluster Neo4jCluster cluster</code></dt>
+ *     <dd>Injects the complete cluster for advanced tests as {@link Neo4jCluster}</dd>
  * </dl>
  *
  * @author Michael J. Simons

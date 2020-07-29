@@ -77,10 +77,10 @@ public class SimpleTest {
 }
 ----
 <1> Register the extension and set a password (Default is `password`)
-<2> Mark a field as `@CausalCluster`. The field can be of type `URI` or `String` and will contain a `bolt+routing` uri into the cluster
+<2> Mark a field as `@CausalCluster`. The field can be of type `URI` or `String` and will contain a `neo4j://` uri into the cluster
 
 For more advanced test, you can also annotate a field of type `List<URI>` or `List<String>` with `@CausalCluster` to get all external entry points into the cluster.
-To retrieve the whole cluster, annotate exactly one field of type `Cluster` with `@CausalCluster`.
+To retrieve the whole cluster, annotate exactly one field of type `Neo4jCluster` with `@CausalCluster`.
 
 === Custom versions
 

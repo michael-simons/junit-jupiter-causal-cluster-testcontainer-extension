@@ -27,7 +27,6 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -39,7 +38,7 @@ import org.junit.platform.commons.support.AnnotationSupport;
 import org.junit.platform.commons.support.HierarchyTraversalMode;
 
 /**
- * Provides exactly one instance of {@link Cluster}.
+ * Provides exactly one instance of {@link Neo4jCluster}.
  *
  * @author Michael J. Simons
  */
@@ -62,7 +61,7 @@ class CausalClusterExtension implements BeforeAllCallback {
 	private static final String KEY = "neo4j.causalCluster";
 
 	private static final Class[] URI_FIELD_SUPPORTED_CLASSES = { URI.class, String.class, Collection.class,
-		List.class, Cluster.class };
+		List.class, Neo4jCluster.class };
 
 	private static final Configuration DEFAULT_CONFIGURATION = new Configuration(DEFAULT_NEO4J_VERSION,
 		DEFAULT_NUMBER_OF_CORE_MEMBERS,
@@ -159,20 +158,20 @@ class CausalClusterExtension implements BeforeAllCallback {
 		return new ExtensionConfigurationException(message);
 	}
 
-	private static Cluster getOrCreateCausalCluster(ExtensionContext extensionContext) {
+	private static Neo4jCluster getOrCreateCausalCluster(ExtensionContext extensionContext) {
 
 		ExtensionContext.Store store = extensionContext.getStore(NAMESPACE);
 		Configuration configuration = store
 			.getOrComputeIfAbsent(KEY_CONFIG, key -> DEFAULT_CONFIGURATION, Configuration.class);
 
 		return extensionContext.getStore(NAMESPACE)
-			.getOrComputeIfAbsent(KEY, key -> new ClusterFactory(configuration).createCluster(), Cluster.class);
+			.getOrComputeIfAbsent(KEY, key -> new ClusterFactory(configuration).createCluster(), Neo4jCluster.class);
 	}
 
 	private static Object getInjectableValue(Class<?> type, ExtensionContext extensionContext) {
 
-		Cluster cluster = getOrCreateCausalCluster(extensionContext);
-		if (type == Cluster.class) {
+		Neo4jCluster cluster = getOrCreateCausalCluster(extensionContext);
+		if (type == Neo4jCluster.class) {
 			return cluster;
 		} else {
 			URI uri = cluster.getURI();
@@ -182,10 +181,7 @@ class CausalClusterExtension implements BeforeAllCallback {
 
 	private static Object getURIs(Type collectionType, ExtensionContext extensionContext) {
 
-		Function<Server, ?> serverToURI = ((Function<Server, URI>) (Server::getURI))
-			.andThen(collectionType == URI.class ? Function.identity() : URI::toString);
-		return getOrCreateCausalCluster(extensionContext).getAllServers().stream()
-			.map(serverToURI)
-			.collect(Collectors.toList());
+		Collection<URI> uris = getOrCreateCausalCluster(extensionContext).getURIs();
+		return collectionType == URI.class ? uris : uris.stream().map(URI::toString).collect(Collectors.toList());
 	}
 }

@@ -18,9 +18,7 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import org.testcontainers.containers.Neo4jContainer;
-import org.testcontainers.containers.Network;
-import org.testcontainers.containers.SocatContainer;
+import static java.util.stream.Collectors.*;
 
 import java.net.URI;
 import java.util.List;
@@ -28,8 +26,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.IntStream;
 
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
+import org.testcontainers.containers.Neo4jContainer;
+import org.testcontainers.containers.Network;
+import org.testcontainers.containers.SocatContainer;
 
 /**
  * Creates new cluster instances.
@@ -49,7 +48,7 @@ final class ClusterFactory {
 		this.configuration = configuration;
 	}
 
-	Cluster createCluster() {
+	Neo4jCluster createCluster() {
 
 		final int numberOfCoreMembers = configuration.getNumberOfCoreMembers();
 
@@ -112,8 +111,8 @@ final class ClusterFactory {
 			e.printStackTrace();
 		}
 
-		List<DefaultServer> neo4jCores = IntStream.range(0, cluster.size())
-			.mapToObj(idx -> new DefaultServer(cluster.get(idx), getNeo4jUri(DEFAULT_BOLT_PORT + idx)))
+		List<DefaultNeo4jServer> neo4jCores = IntStream.range(0, cluster.size())
+			.mapToObj(idx -> new DefaultNeo4jServer(cluster.get(idx), getNeo4jUri(DEFAULT_BOLT_PORT + idx)))
 			.collect(toList());
 
 		return new DefaultCluster(boltProxy, neo4jCores);

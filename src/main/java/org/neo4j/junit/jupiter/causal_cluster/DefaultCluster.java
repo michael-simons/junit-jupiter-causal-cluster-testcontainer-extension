@@ -18,24 +18,24 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
-import org.testcontainers.containers.SocatContainer;
-
 import java.net.URI;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
+import org.testcontainers.containers.SocatContainer;
+
 /**
  * @author Michael J. Simons
  */
-final class DefaultCluster implements Cluster, CloseableResource {
+final class DefaultCluster implements Neo4jCluster, CloseableResource {
 
 	private final SocatContainer boltProxy;
-	private final List<DefaultServer> servers;
+	private final List<DefaultNeo4jServer> servers;
 
-	DefaultCluster(SocatContainer boltProxy, List<DefaultServer> servers) {
+	DefaultCluster(SocatContainer boltProxy, List<DefaultNeo4jServer> servers) {
 
 		this.boltProxy = boltProxy;
 		this.servers = servers;
@@ -44,7 +44,7 @@ final class DefaultCluster implements Cluster, CloseableResource {
 	@Override
 	public URI getURI() {
 		// Choose a random bolt port from the available ports
-		DefaultServer core = servers.get(ThreadLocalRandom.current().nextInt(0, servers.size()));
+		DefaultNeo4jServer core = servers.get(ThreadLocalRandom.current().nextInt(0, servers.size()));
 		return core.getURI();
 	}
 
@@ -52,11 +52,11 @@ final class DefaultCluster implements Cluster, CloseableResource {
 	public void close() {
 
 		boltProxy.stop();
-		servers.forEach(DefaultServer::close);
+		servers.forEach(DefaultNeo4jServer::close);
 	}
 
 	@Override
-	public Set<Server> getAllServers() {
+	public Set<Neo4jServer> getAllServers() {
 		return new HashSet<>(servers);
 	}
 }

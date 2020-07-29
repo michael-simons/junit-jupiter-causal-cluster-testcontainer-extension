@@ -54,7 +54,7 @@ public class AllAnnotationsAppliedTest {
 	static Collection<URI> clusterUriCollectionOfURIs;
 
 	@CausalCluster
-	static Cluster cluster;
+	static Neo4jCluster cluster;
 
 	@Test
 	void nothingIsNull() {
@@ -69,23 +69,35 @@ public class AllAnnotationsAppliedTest {
 	}
 
 	@Test
-	void clusterTest() throws URISyntaxException, IllegalAccessException {
-		Set<Server> allServers = cluster.getAllServers();
+	void clusterTest() {
+
+		assertThat(cluster.getURIs())
+			.containsExactlyInAnyOrderElementsOf(clusterUriCollectionOfURIs);
+
+		Set<Neo4jServer> allServers = cluster.getAllServers();
 		assertThat(allServers).hasSize(3);
 
-		List<URI> allUris = allServers.stream().map(Server::getURI).collect(Collectors.toList());
+		List<URI> allUris = allServers.stream().map(Neo4jServer::getURI).collect(Collectors.toList());
 		assertThat(allUris).hasSize(3);
 		assertThat(allUris).containsExactlyInAnyOrderElementsOf(clusterUriCollectionOfURIs);
 
+	}
+
+	@Test
+	void serverComparisonTest() throws URISyntaxException, IllegalAccessException {
 		// Get the container. 🤠
 		Field field = ReflectionUtils
-			.findFields(DefaultServer.class, f -> "container".equals(f.getName()), ReflectionUtils.HierarchyTraversalMode.TOP_DOWN).get(0);
+			.findFields(DefaultNeo4jServer.class, f -> "container".equals(f.getName()),
+				ReflectionUtils.HierarchyTraversalMode.TOP_DOWN).get(0);
 		field.setAccessible(true);
 
 		// check that equality & hash code implementation doesn't mess up if we try adding the same servers to a set repeatedly
-		for (Server server : allServers) {
+		Set<Neo4jServer> allServers = cluster.getAllServers();
+		assertThat(allServers).hasSize(3);
 
-			DefaultServer newServer = new DefaultServer(
+		for (Neo4jServer server : allServers) {
+
+			DefaultNeo4jServer newServer = new DefaultNeo4jServer(
 				(Neo4jContainer<?>) field.get(server), new URI(server.getURI().toString()));
 
 			assertThat(newServer.hashCode()).isEqualTo(server.hashCode());
@@ -107,7 +119,7 @@ public class AllAnnotationsAppliedTest {
 		assertThat(clusterUriListOfURIs.get(0)).isInstanceOf(URI.class);
 		assertThat(clusterUriListOfStrings.get(0)).isInstanceOf(String.class);
 
-		assertThat(cluster).isInstanceOf(Cluster.class);
+		assertThat(cluster).isInstanceOf(Neo4jCluster.class);
 	}
 
 	@Test

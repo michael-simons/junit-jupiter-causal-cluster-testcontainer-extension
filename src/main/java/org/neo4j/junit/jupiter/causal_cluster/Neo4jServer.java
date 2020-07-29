@@ -19,23 +19,18 @@
 package org.neo4j.junit.jupiter.causal_cluster;
 
 import java.net.URI;
-import java.util.Set;
 
 /**
- * This allows us to interact with a Neo4j Causal Cluster.
+ * This is a Neo4j instance that is a part of causal cluster, with {@literal Neo4jServer} being used equally for Core and
+ * Replica Servers as defined in
+ * <a href="https://neo4j.com/docs/operations-manual/current/clustering/introduction/">the Neo4j introduction to clustering</a>.
  *
  * @author Michael J. Simons
- * @author Andrew Jefferson
  */
-public interface Cluster {
+public interface Neo4jServer {
 
 	/**
-	 * @return An URI into this cluster.
+	 * @return An URI into this server.
 	 */
 	URI getURI();
-
-	/**
-	 * @return The Neo4j servers contained by this cluster.
-	 */
-	Set<Server> getAllServers();
 }

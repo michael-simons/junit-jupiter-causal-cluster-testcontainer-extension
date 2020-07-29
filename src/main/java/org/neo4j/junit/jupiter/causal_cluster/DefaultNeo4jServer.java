@@ -27,7 +27,7 @@ import org.testcontainers.containers.Neo4jContainer;
  * @author Andrew Jefferson
  * @author Michael J. Simons
  */
-final class DefaultServer implements Server, AutoCloseable {
+final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 
 	/**
 	 * The underlying test container instance.
@@ -38,7 +38,7 @@ final class DefaultServer implements Server, AutoCloseable {
 	 */
 	private final URI externalURI;
 
-	public DefaultServer(Neo4jContainer<?> container, URI externalURI) {
+	public DefaultNeo4jServer(Neo4jContainer<?> container, URI externalURI) {
 		this.container = container;
 		this.externalURI = externalURI;
 	}
@@ -55,7 +55,7 @@ final class DefaultServer implements Server, AutoCloseable {
 		if (o == null || getClass() != o.getClass()) {
 			return false;
 		}
-		DefaultServer that = (DefaultServer) o;
+		DefaultNeo4jServer that = (DefaultNeo4jServer) o;
 		return container.equals(that.container) &&
 			externalURI.equals(that.externalURI);
 	}
