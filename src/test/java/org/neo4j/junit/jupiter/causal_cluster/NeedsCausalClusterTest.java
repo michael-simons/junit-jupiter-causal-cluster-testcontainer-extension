@@ -129,7 +129,7 @@ class NeedsCausalClusterTest {
 		}
 	}
 
-	static void verifyConnectivity(Cluster cluster) {
+	static void verifyConnectivity(CausalCluster cluster) {
 		List<String> clusterUris = cluster.getAllCores().stream()
 			.map(c -> c.getNeo4jUri().toString())
 			.collect(Collectors.toList());
@@ -171,7 +171,7 @@ class NeedsCausalClusterTest {
 	static class StaticClusterFieldOnPerMethodLifecycleTest {
 
 		@Neo4jCluster
-		static Cluster cluster;
+		static CausalCluster cluster;
 
 		@Test
 		void aTest() {
@@ -237,10 +237,10 @@ class NeedsCausalClusterTest {
 	static class MultipleClusterInjectionPointsPerMethodLifeCycleTest {
 
 		@Neo4jCluster
-		static Cluster cluster1;
+		static CausalCluster cluster1;
 
 		@Neo4jCluster
-		static Cluster cluster2;
+		static CausalCluster cluster2;
 
 		@Test
 		void aTest() {
@@ -263,7 +263,7 @@ class NeedsCausalClusterTest {
 		static List<URI> clusterUris;
 
 		@Neo4jCluster
-		static Cluster cluster;
+		static CausalCluster cluster;
 
 		@Test
 		void aTest() throws URISyntaxException {
@@ -314,7 +314,7 @@ class NeedsCausalClusterTest {
 	static class InstanceClusterFieldInPerClassLifecycleTest {
 
 		@Neo4jCluster
-		Cluster cluster;
+		CausalCluster cluster;
 
 		@Test
 		void aTest() {
@@ -382,10 +382,10 @@ class NeedsCausalClusterTest {
 	static class MultipleClusterInjectionPointsPerClassLifeCycleTest {
 
 		@Neo4jCluster
-		Cluster cluster1;
+		CausalCluster cluster1;
 
 		@Neo4jCluster
-		Cluster cluster2;
+		CausalCluster cluster2;
 
 		@Test
 		void aTest() {
@@ -409,7 +409,7 @@ class NeedsCausalClusterTest {
 		List<URI> clusterUris;
 
 		@Neo4jCluster
-		Cluster cluster;
+		CausalCluster cluster;
 
 		@Test
 		void aTest() throws URISyntaxException {
@@ -507,7 +507,7 @@ class NeedsCausalClusterTest {
 	static class MixedUpClusterExtensionPoint {
 
 		@Neo4jUri
-		static Cluster clusterUri;
+		static CausalCluster clusterUri;
 
 		@Test
 		void aTest() {

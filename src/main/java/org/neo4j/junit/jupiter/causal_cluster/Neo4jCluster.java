@@ -25,7 +25,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a field of type {@link Cluster} as injectable with the Neo4j causal cluster API
+ * Marks a field of type {@link CausalCluster} as injectable with the Neo4j causal cluster API
  */
 @Target({ ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)

@@ -115,7 +115,7 @@ final class CausalClusterFactory {
 			.mapToObj(idx -> new Neo4jCore(cluster.get(idx), getNeo4jUri(DEFAULT_BOLT_PORT + idx)))
 			.collect(toList());
 
-		return new CausalCluster(boltProxy, neo4jCores);
+		return new DefaultCausalCluster(boltProxy, neo4jCores);
 	}
 
 	private URI getNeo4jUri(int boltPort) {

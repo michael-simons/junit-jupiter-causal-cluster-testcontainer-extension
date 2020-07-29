@@ -114,11 +114,11 @@ class CausalClusterExtension implements BeforeAllCallback {
 
 		AnnotationSupport.findAnnotatedFields(context.getRequiredTestClass(), Neo4jCluster.class, selectedFields,
 			HierarchyTraversalMode.TOP_DOWN).forEach(field -> {
-			assertSupportedType(Neo4jCluster.class, "field", field.getType(), Cluster.class);
+			assertSupportedType(Neo4jCluster.class, "field", field.getType(), CausalCluster.class);
 			field.setAccessible(true);
 			try {
 				assertFieldIsNull(Neo4jCluster.class, testInstance, field);
-				field.set(testInstance, getCausalCluster(context));
+				field.set(testInstance, getOrCreateCausalCluster(context));
 			} catch (IllegalAccessException e) {
 				throw new RuntimeException(e);
 			}
@@ -170,7 +170,7 @@ class CausalClusterExtension implements BeforeAllCallback {
 		return new ExtensionConfigurationException(message);
 	}
 
-	private static CausalCluster createCausalCluster(ExtensionContext extensionContext) {
+	private static CausalCluster getOrCreateCausalCluster(ExtensionContext extensionContext) {
 
 		ExtensionContext.Store store = extensionContext.getStore(NAMESPACE);
 		Configuration configuration = store
@@ -182,18 +182,13 @@ class CausalClusterExtension implements BeforeAllCallback {
 
 	private static Object getURI(Class<?> type, ExtensionContext extensionContext) {
 
-		URI uri = createCausalCluster(extensionContext).getURI();
+		URI uri = getOrCreateCausalCluster(extensionContext).getURI();
 		return type == URI.class ? uri : uri.toString();
 	}
 
 	private static Object getURIs(Type collectionType, ExtensionContext extensionContext) {
 
-		List<URI> uris = createCausalCluster(extensionContext).getURIs();
+		List<URI> uris = ((DefaultCausalCluster)getOrCreateCausalCluster(extensionContext)).getURIs();
 		return collectionType == URI.class ? uris : uris.stream().map(URI::toString).collect(Collectors.toList());
-	}
-
-	private static Object getCausalCluster(ExtensionContext extensionContext) {
-
-		return createCausalCluster(extensionContext);
 	}
 }

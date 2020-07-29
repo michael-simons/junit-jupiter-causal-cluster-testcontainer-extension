@@ -52,7 +52,7 @@ public class AllAnnotationsAppliedTest {
 	static Collection<URI> clusterUriCollectionOfURIs;
 
 	@Neo4jCluster
-	static Cluster cluster;
+	static CausalCluster cluster;
 
 	@Test
 	void nothingIsNull() {
@@ -99,7 +99,7 @@ public class AllAnnotationsAppliedTest {
 		assertThat(clusterUriListOfURIs.get(0)).isInstanceOf(URI.class);
 		assertThat(clusterUriListOfStrings.get(0)).isInstanceOf(String.class);
 
-		assertThat(cluster).isInstanceOf(Cluster.class);
+		assertThat(cluster).isInstanceOf(CausalCluster.class);
 	}
 
 	@Test

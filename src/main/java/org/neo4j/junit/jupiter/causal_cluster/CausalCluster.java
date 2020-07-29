@@ -18,52 +18,24 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
-import org.testcontainers.containers.SocatContainer;
-
 import java.net.URI;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
-
-import static java.util.stream.Collectors.toList;
 
 /**
- * This allows us to interact with the Neo4j Causal Cluster
+ * This allows us to interact with a Neo4j Causal Cluster.
  *
+ * @author Andrew Jefferson
  * @author Michael J. Simons
  */
-class CausalCluster implements Cluster, CloseableResource {
+public interface CausalCluster {
 
-	private final SocatContainer boltProxy;
-	private final List<Neo4jCore> clusterCores;
+	/**
+	 * @return An URI into that cluster.
+	 */
+	URI getURI();
 
-	CausalCluster(SocatContainer boltProxy, List<Neo4jCore> clusterCores) {
-
-		this.boltProxy = boltProxy;
-		this.clusterCores = clusterCores;
-	}
-
-	public URI getURI() {
-		// Choose a random bolt port from the available ports
-		Neo4jCore core = clusterCores.get(ThreadLocalRandom.current().nextInt(0, clusterCores.size()));
-		return core.getNeo4jUri();
-	}
-
-	public List<URI> getURIs() {
-		return clusterCores.stream().map(Neo4jCore::getNeo4jUri).collect(toList());
-	}
-
-	@Override
-	public void close() {
-
-		boltProxy.stop();
-		clusterCores.forEach(Neo4jCore::close);
-	}
-
-	@Override
-	public Set<Neo4jCore> getAllCores() {
-		return new HashSet<>(clusterCores);
-	}
+	/**
+	 * @return The Neo4j instances contained by this cluster.
+	 */
+	Set<Neo4jCore> getAllCores();
 }
