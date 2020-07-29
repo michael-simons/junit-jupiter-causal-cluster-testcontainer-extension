@@ -18,52 +18,34 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
-import org.testcontainers.containers.SocatContainer;
-
-import java.net.URI;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
-
-import static java.util.stream.Collectors.toList;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * This allows us to interact with the Neo4j Causal Cluster
+ * Marks a field as an injection point for a Neo4j Causal Cluster.
+ * The cluster will be started before all tests and be shutdown, including all servers, after the test.
+ * The following list shows valid injection points:
+ * <dl>
+ *     <dt><code>@CausalCluster String uri</code></dt>
+ *     <dd>Injects a random, externally accessible URI as a {@link String}.</dd>
+ *     <dt><code>@CausalCluster URI uri</code></dt>
+ *     <dd>Injects a random, externally accessible URI as an {@link java.net.URI}.</dd>
+ *     <dt><code>@CausalCluster List&lt;String&gt; uris</code></dt>
+ *     <dd>Injects all externally accessible URIs as {@link String strings}</dd>
+ *     <dt><code>@CausalCluster List&lt;URI&gt; uris</code></dt>
+ *     <dd>Injects all externally accessible URIs as {@link java.net.URI uris}</dd>
+ *     <dt><code>@CausalCluster Cluster cluster</code></dt>
+ *     <dd>Injects the complete cluster for advanced tests as {@link Cluster}</dd>
+ * </dl>
  *
  * @author Michael J. Simons
+ * @author Andrew Jefferson
  */
-class CausalCluster implements Cluster, CloseableResource {
-
-	private final SocatContainer boltProxy;
-	private final List<Neo4jCore> clusterCores;
-
-	CausalCluster(SocatContainer boltProxy, List<Neo4jCore> clusterCores) {
-
-		this.boltProxy = boltProxy;
-		this.clusterCores = clusterCores;
-	}
-
-	public URI getURI() {
-		// Choose a random bolt port from the available ports
-		Neo4jCore core = clusterCores.get(ThreadLocalRandom.current().nextInt(0, clusterCores.size()));
-		return core.getNeo4jUri();
-	}
-
-	public List<URI> getURIs() {
-		return clusterCores.stream().map(Neo4jCore::getNeo4jUri).collect(toList());
-	}
-
-	@Override
-	public void close() {
-
-		boltProxy.stop();
-		clusterCores.forEach(Neo4jCore::close);
-	}
-
-	@Override
-	public Set<Neo4jCore> getAllCores() {
-		return new HashSet<>(clusterCores);
-	}
+@Target({ ElementType.FIELD })
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface CausalCluster {
 }
