@@ -130,8 +130,8 @@ class NeedsCausalClusterTest {
 	}
 
 	static void verifyConnectivity(CausalCluster cluster) {
-		List<String> clusterUris = cluster.getAllCores().stream()
-			.map(c -> c.getNeo4jUri().toString())
+		List<String> clusterUris = cluster.getAllServers().stream()
+			.map(c -> c.getURI().toString())
 			.collect(Collectors.toList());
 
 		verifyConnectivity(clusterUris);
@@ -245,7 +245,7 @@ class NeedsCausalClusterTest {
 		@Test
 		void aTest() {
 
-			assertEquals(cluster1.getAllCores(), cluster2.getAllCores());
+			assertEquals(cluster1.getAllServers(), cluster2.getAllServers());
 			verifyConnectivity(cluster1);
 		}
 	}
@@ -271,7 +271,7 @@ class NeedsCausalClusterTest {
 			assertThat(clusterUris).containsOnlyOnce(clusterUri);
 			assertThat(clusterUris).containsOnlyOnce(new URI(clusterUriString));
 
-			assertThat(cluster.getAllCores().stream().map(Neo4jCore::getNeo4jUri))
+			assertThat(cluster.getAllServers().stream().map(Server::getURI))
 				.containsExactlyInAnyOrderElementsOf(clusterUris);
 
 			verifyConnectivity(cluster);
@@ -390,7 +390,7 @@ class NeedsCausalClusterTest {
 		@Test
 		void aTest() {
 
-			assertEquals(cluster1.getAllCores(), cluster2.getAllCores());
+			assertEquals(cluster1.getAllServers(), cluster2.getAllServers());
 			verifyConnectivity(cluster1);
 		}
 	}
@@ -417,7 +417,7 @@ class NeedsCausalClusterTest {
 			assertThat(clusterUris).containsOnlyOnce(clusterUri);
 			assertThat(clusterUris).containsOnlyOnce(new URI(clusterUriString));
 
-			assertThat(cluster.getAllCores().stream().map(Neo4jCore::getNeo4jUri))
+			assertThat(cluster.getAllServers().stream().map(Server::getURI))
 				.containsExactlyInAnyOrderElementsOf(clusterUris);
 
 			verifyConnectivity(cluster);

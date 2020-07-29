@@ -18,8 +18,10 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.*;
 
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collection;
@@ -27,8 +29,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import org.junit.jupiter.api.Test;
+import org.junit.platform.commons.util.ReflectionUtils;
+import org.testcontainers.containers.Neo4jContainer;
 
 @NeedsCausalCluster
 public class AllAnnotationsAppliedTest {
@@ -67,25 +70,31 @@ public class AllAnnotationsAppliedTest {
 	}
 
 	@Test
-	void clusterTest() throws URISyntaxException {
-		Set<Neo4jCore> allCores = cluster.getAllCores();
-		assertThat(allCores).hasSize(3);
+	void clusterTest() throws URISyntaxException, IllegalAccessException {
+		Set<Server> allServers = cluster.getAllServers();
+		assertThat(allServers).hasSize(3);
 
-		List<URI> allUris = allCores.stream().map(Neo4jCore::getNeo4jUri).collect(Collectors.toList());
+		List<URI> allUris = allServers.stream().map(Server::getURI).collect(Collectors.toList());
 		assertThat(allUris).hasSize(3);
 		assertThat(allUris).containsExactlyInAnyOrderElementsOf(clusterUriCollectionOfURIs);
 
-		// check that equality & hash code implementation doesn't mess up if we try adding the same cores to a set repeatedly
-		for (Neo4jCore core : cluster.getAllCores()) {
+		// Get the container. 🤠
+		Field field = ReflectionUtils
+			.findFields(DefaultServer.class, f -> "container".equals(f.getName()), ReflectionUtils.HierarchyTraversalMode.TOP_DOWN).get(0);
+		field.setAccessible(true);
 
-			Neo4jCore newCore = new Neo4jCore(core.unwrap(), new URI(core.getNeo4jUri().toString()));
+		// check that equality & hash code implementation doesn't mess up if we try adding the same servers to a set repeatedly
+		for (Server server : allServers) {
 
-			assertThat(newCore.hashCode()).isEqualTo(core.hashCode());
-			assertThat(newCore).isEqualTo(core);
+			DefaultServer newServer = new DefaultServer(
+				(Neo4jContainer<?>) field.get(server), new URI(server.getURI().toString()));
 
-			allCores.add(newCore);
+			assertThat(newServer.hashCode()).isEqualTo(server.hashCode());
+			assertThat(newServer).isEqualTo(server);
+
+			allServers.add(newServer);
 		}
-		assertThat(allCores).hasSize(3);
+		assertThat(allServers).hasSize(3);
 	}
 
 	@Test

@@ -35,34 +35,34 @@ import static java.util.stream.Collectors.toList;
 final class DefaultCausalCluster implements CausalCluster, CloseableResource {
 
 	private final SocatContainer boltProxy;
-	private final List<Neo4jCore> clusterCores;
+	private final List<DefaultServer> servers;
 
-	DefaultCausalCluster(SocatContainer boltProxy, List<Neo4jCore> clusterCores) {
+	DefaultCausalCluster(SocatContainer boltProxy, List<DefaultServer> servers) {
 
 		this.boltProxy = boltProxy;
-		this.clusterCores = clusterCores;
+		this.servers = servers;
 	}
 
 	@Override
 	public URI getURI() {
 		// Choose a random bolt port from the available ports
-		Neo4jCore core = clusterCores.get(ThreadLocalRandom.current().nextInt(0, clusterCores.size()));
-		return core.getNeo4jUri();
+		DefaultServer core = servers.get(ThreadLocalRandom.current().nextInt(0, servers.size()));
+		return core.getURI();
 	}
 
-	public List<URI> getURIs() {
-		return clusterCores.stream().map(Neo4jCore::getNeo4jUri).collect(toList());
+	List<URI> getURIs() {
+		return servers.stream().map(DefaultServer::getURI).collect(toList());
 	}
 
 	@Override
 	public void close() {
 
 		boltProxy.stop();
-		clusterCores.forEach(Neo4jCore::close);
+		servers.forEach(DefaultServer::close);
 	}
 
 	@Override
-	public Set<Neo4jCore> getAllCores() {
-		return new HashSet<>(clusterCores);
+	public Set<Server> getAllServers() {
+		return new HashSet<>(servers);
 	}
 }

@@ -18,23 +18,34 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import org.testcontainers.containers.Neo4jContainer;
-
 import java.net.URI;
 import java.util.Objects;
 
-public class Neo4jCore implements AutoCloseable {
+import org.testcontainers.containers.Neo4jContainer;
 
+/**
+ * @author Andrew Jefferson
+ * @author Michael J. Simons
+ */
+final class DefaultServer implements Server, AutoCloseable {
+
+	/**
+	 * The underlying test container instance.
+	 */
 	private final Neo4jContainer<?> container;
-	private final URI neo4jUri;
+	/**
+	 * The external URI under which this server is reachable, not to be confused with the internal URI returned by {@link Neo4jContainer#getBoltUrl()}.
+	 */
+	private final URI externalURI;
 
-	public Neo4jCore(Neo4jContainer<?> container, URI neo4jUri) {
+	public DefaultServer(Neo4jContainer<?> container, URI externalURI) {
 		this.container = container;
-		this.neo4jUri = neo4jUri;
+		this.externalURI = externalURI;
 	}
 
-	public URI getNeo4jUri() {
-		return neo4jUri;
+	@Override
+	public URI getURI() {
+		return externalURI;
 	}
 
 	@Override public boolean equals(Object o) {
@@ -44,22 +55,17 @@ public class Neo4jCore implements AutoCloseable {
 		if (o == null || getClass() != o.getClass()) {
 			return false;
 		}
-		Neo4jCore neo4jCore = (Neo4jCore) o;
-		return getNeo4jUri().equals(neo4jCore.getNeo4jUri()) &&
-			container.equals(neo4jCore.container);
+		DefaultServer that = (DefaultServer) o;
+		return container.equals(that.container) &&
+			externalURI.equals(that.externalURI);
 	}
 
-	@Override
-	public int hashCode() {
-		return Objects.hash(container, getNeo4jUri());
+	@Override public int hashCode() {
+		return Objects.hash(container, externalURI);
 	}
 
 	@Override
 	public void close() {
 		container.close();
-	}
-
-	Neo4jContainer<?> unwrap() {
-		return container;
 	}
 }

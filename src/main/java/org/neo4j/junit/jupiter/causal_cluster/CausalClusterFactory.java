@@ -111,8 +111,8 @@ final class CausalClusterFactory {
 			e.printStackTrace();
 		}
 
-		List<Neo4jCore> neo4jCores = IntStream.range(0, cluster.size())
-			.mapToObj(idx -> new Neo4jCore(cluster.get(idx), getNeo4jUri(DEFAULT_BOLT_PORT + idx)))
+		List<DefaultServer> neo4jCores = IntStream.range(0, cluster.size())
+			.mapToObj(idx -> new DefaultServer(cluster.get(idx), getNeo4jUri(DEFAULT_BOLT_PORT + idx)))
 			.collect(toList());
 
 		return new DefaultCausalCluster(boltProxy, neo4jCores);
