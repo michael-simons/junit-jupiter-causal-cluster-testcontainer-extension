@@ -54,7 +54,7 @@
 		<lombok.version>1.18.12</lombok.version>
 		<maven-compiler-plugin.version>3.8.0</maven-compiler-plugin.version>
 		<maven-gpg-plugin.version>1.6</maven-gpg-plugin.version>
-		<maven-javadoc-plugin.version>3.0.1</maven-javadoc-plugin.version>
+		<maven-javadoc-plugin.version>3.2.0</maven-javadoc-plugin.version>
 		<maven-release-plugin.version>2.5.3</maven-release-plugin.version>
 		<maven-source-plugin.version>3.0.1</maven-source-plugin.version>
 		<maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
@@ -179,6 +179,18 @@
 						</goals>
 					</execution>
 				</executions>
+				<configuration>
+					<detectOfflineLinks>false</detectOfflineLinks>
+					<detectJavaApiLink>false</detectJavaApiLink>
+					<source>${java.version}</source>
+					<tags>
+						<tag>
+							<name>soundtrack</name>
+							<placement>X</placement>
+							<head>Soundtrack</head>
+						</tag>
+					</tags>
+				</configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
