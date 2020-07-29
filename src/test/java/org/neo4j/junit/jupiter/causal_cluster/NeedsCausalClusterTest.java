@@ -57,7 +57,8 @@ class NeedsCausalClusterTest {
 		void shouldWorkWithIntendedUsage() {
 			Events testEvents = EngineTestKit.engine(ENGINE_ID)
 				.selectors(
-					selectClass(StaticClusterUriFieldOnPerMethodLifecycleTest.class),
+					selectClass(StaticUriFieldOnPerMethodLifecycleTest.class),
+					selectClass(StaticCollectionFieldOnPerMethodLifecycleTest.class),
 					selectClass(StaticClusterFieldOnPerMethodLifecycleTest.class),
 					selectClass(InstanceUriFieldInPerClassLifecycleTest.class),
 					selectClass(InstanceCollectionFieldInPerClassLifecycleTest.class),
@@ -69,7 +70,7 @@ class NeedsCausalClusterTest {
 			assertThat(testEvents.failed().stream().collect(Collectors.toList()))
 				.hasSize(0);
 			assertThat(testEvents.succeeded().stream().collect(Collectors.toList()))
-				.hasSize(6);
+				.hasSize(7);
 		}
 
 		@Test
@@ -154,7 +155,7 @@ class NeedsCausalClusterTest {
 	}
 
 	@NeedsCausalCluster
-	static class StaticClusterUriFieldOnPerMethodLifecycleTest {
+	static class StaticUriFieldOnPerMethodLifecycleTest {
 
 		@Neo4jUri
 		static String clusterUri;
@@ -164,6 +165,21 @@ class NeedsCausalClusterTest {
 
 			assertNotNull(clusterUri);
 			verifyConnectivity(clusterUri);
+		}
+	}
+
+	@NeedsCausalCluster
+	static class StaticCollectionFieldOnPerMethodLifecycleTest {
+
+		@Neo4jUri
+		static Collection<String> clusterUris;
+
+		@Test
+		void aTest() {
+
+			assertNotNull(clusterUris);
+			assertThat(clusterUris).isNotEmpty();
+			verifyConnectivity(clusterUris);
 		}
 	}
 
