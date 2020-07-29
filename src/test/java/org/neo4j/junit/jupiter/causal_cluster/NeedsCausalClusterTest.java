@@ -36,9 +36,6 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 
 /**
@@ -162,7 +159,7 @@ class NeedsCausalClusterTest {
 		@Test
 		void aTest() {
 
-			assertNotNull(clusterUri);
+			assertThat(clusterUri).isNotNull();
 			verifyConnectivity(clusterUri);
 		}
 	}
@@ -176,7 +173,7 @@ class NeedsCausalClusterTest {
 		@Test
 		void aTest() {
 
-			assertNotNull(cluster);
+			assertThat(cluster).isNotNull();
 			verifyConnectivity(cluster);
 		}
 	}
@@ -245,7 +242,7 @@ class NeedsCausalClusterTest {
 		@Test
 		void aTest() {
 
-			assertEquals(cluster1.getAllServers(), cluster2.getAllServers());
+			assertThat(cluster1.getAllServers()).isEqualTo(cluster2.getAllServers());
 			verifyConnectivity(cluster1);
 		}
 	}
@@ -288,7 +285,7 @@ class NeedsCausalClusterTest {
 		@Test
 		void aTest() {
 
-			assertNotNull(clusterUri);
+			assertThat(clusterUri).isNotNull();
 			verifyConnectivity(clusterUri);
 		}
 	}
@@ -303,8 +300,9 @@ class NeedsCausalClusterTest {
 		@Test
 		void aTest() {
 
-			assertNotNull(clusterUris);
-			assertFalse(clusterUris.isEmpty());
+			assertThat(clusterUris)
+				.isNotNull()
+				.isNotEmpty();
 			verifyConnectivity(clusterUris);
 		}
 	}
@@ -319,7 +317,7 @@ class NeedsCausalClusterTest {
 		@Test
 		void aTest() {
 
-			assertNotNull(cluster);
+			assertThat(cluster).isNotNull();
 			verifyConnectivity(cluster);
 		}
 	}
@@ -390,7 +388,7 @@ class NeedsCausalClusterTest {
 		@Test
 		void aTest() {
 
-			assertEquals(cluster1.getAllServers(), cluster2.getAllServers());
+			assertThat(cluster1.getAllServers()).isEqualTo(cluster2.getAllServers());
 			verifyConnectivity(cluster1);
 		}
 	}
@@ -437,7 +435,7 @@ class NeedsCausalClusterTest {
 			@Test
 			void aTest() {
 
-				assertNotNull(clusterUri);
+				assertThat(clusterUri).isNotNull();
 				verifyConnectivity(clusterUri);
 			}
 		}
@@ -452,7 +450,7 @@ class NeedsCausalClusterTest {
 
 		@Test
 		void aTest() {
-			assertNotNull(clusterUri);
+			assertThat(clusterUri).isNotNull();
 		}
 	}
 
@@ -463,7 +461,7 @@ class NeedsCausalClusterTest {
 
 		@Test
 		void aTest() {
-			assertNotNull(clusterUri);
+			assertThat(clusterUri).isNotNull();
 		}
 	}
 
@@ -475,7 +473,7 @@ class NeedsCausalClusterTest {
 
 		@Test
 		void aTest() {
-			assertNotNull(clusterUri);
+			assertThat(clusterUri).isNotNull();
 		}
 	}
 
@@ -487,7 +485,7 @@ class NeedsCausalClusterTest {
 
 		@Test
 		void aTest() {
-			assertNotNull(clusterUris);
+			assertThat(clusterUris).isNotNull();
 		}
 	}
 
@@ -499,7 +497,7 @@ class NeedsCausalClusterTest {
 
 		@Test
 		void aTest() {
-			assertNotNull(cluster);
+			assertThat(cluster).isNotNull();
 		}
 	}
 
@@ -511,7 +509,7 @@ class NeedsCausalClusterTest {
 
 		@Test
 		void aTest() {
-			assertNotNull(clusterUri);
+			assertThat(clusterUri).isNotNull();
 		}
 	}
 
@@ -523,7 +521,7 @@ class NeedsCausalClusterTest {
 
 		@Test
 		void aTest() {
-			assertNotNull(cluster);
+			assertThat(cluster).isNotNull();
 		}
 	}
 
@@ -539,7 +537,7 @@ class NeedsCausalClusterTest {
 
 			@Test
 			void aTest() {
-				assertNotNull(clusterUri);
+				assertThat(clusterUri).isNotNull();
 			}
 		}
 	}

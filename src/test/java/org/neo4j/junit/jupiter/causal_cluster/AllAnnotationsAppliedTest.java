@@ -19,7 +19,6 @@
 package org.neo4j.junit.jupiter.causal_cluster;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 import java.lang.reflect.Field;
 import java.net.URI;
@@ -60,13 +59,13 @@ public class AllAnnotationsAppliedTest {
 	@Test
 	void nothingIsNull() {
 
-		assertNotNull(clusterUriString);
-		assertNotNull(clusterUri);
-		assertNotNull(clusterUriListOfStrings);
-		assertNotNull(clusterUriCollectionOfStrings);
-		assertNotNull(clusterUriListOfURIs);
-		assertNotNull(clusterUriCollectionOfURIs);
-		assertNotNull(cluster);
+		assertThat(clusterUriString).isNotNull();
+		assertThat(clusterUri).isNotNull();
+		assertThat(clusterUriListOfStrings).isNotNull();
+		assertThat(clusterUriCollectionOfStrings).isNotNull();
+		assertThat(clusterUriListOfURIs).isNotNull();
+		assertThat(clusterUriCollectionOfURIs).isNotNull();
+		assertThat(cluster).isNotNull();
 	}
 
 	@Test
