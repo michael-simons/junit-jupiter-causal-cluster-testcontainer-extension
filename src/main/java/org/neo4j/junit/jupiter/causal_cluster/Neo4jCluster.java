@@ -19,6 +19,7 @@
 package org.neo4j.junit.jupiter.causal_cluster;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -47,4 +48,24 @@ public interface Neo4jCluster {
 	 * @return The Neo4j servers contained by this cluster.
 	 */
 	Set<Neo4jServer> getAllServers();
+
+	Set<Neo4jServer> getAllServersExcept(Set<Neo4jServer> except);
+
+	Set<Neo4jServer> stopRandomServers(int n);
+
+	Set<Neo4jServer> stopRandomServersExcept(int n, Set<Neo4jServer> except);
+
+	Set<Neo4jServer> startServers(Set<Neo4jServer> servers);
+
+	void waitForLogMessageOnAll(Set<Neo4jServer> servers, String message, Duration timeout)
+		throws Neo4jTimeoutException;
+
+	void waitForBoltOnAll(Set<Neo4jServer> servers, Duration timeout)
+		throws Neo4jTimeoutException;
+
+	class Neo4jTimeoutException extends Exception {
+		Neo4jTimeoutException(Exception cause) {
+			super(cause);
+		}
+	}
 }

@@ -65,6 +65,10 @@ final class Configuration implements Serializable {
 		this.customImageName = customImageName;
 	}
 
+	/**
+	 * Get the core index and hostname for all configured cores
+	 * @return A stream mapping a core index (integer) -> hostname (String)
+	 */
 	Stream<Map.Entry<Integer, String>> iterateCoreMembers() {
 		final IntFunction<String> generateInstanceName = i -> String.format("neo4j%d", i);
 

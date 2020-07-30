@@ -18,27 +18,23 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import java.net.URI;
+import java.util.regex.Matcher;
 
-/**
- * This is a Neo4j instance that is a part of causal cluster, with {@literal Neo4jServer} being used equally for Core and
- * Replica Servers as defined in
- * <a href="https://neo4j.com/docs/operations-manual/current/clustering/introduction/">the Neo4j introduction to clustering</a>.
- *
- * @author Michael J. Simons
- */
-public interface Neo4jServer {
+public class WaitForMessageInLatestLogs extends WaitForLogMessageAfter {
 
-	String getDebugLogs();
+	public static WaitForMessageInLatestLogs build(String query, Neo4jServer server) {
+		Matcher matcher = startsWithATimestampPattern.matcher(server.getLatestContainerLogs());
+		String firstLineInLatestLogs = matcher.find() ? matcher.group() : null;
 
-	String getAllContainerLogs();
+		if (firstLineInLatestLogs == null) {
+			throw new RuntimeException("Unable to determine first timestamp in latest logs for "
+				+ server.getURI().toString());
+		}
 
-	String getLatestContainerLogs();
+		return new WaitForMessageInLatestLogs(query, firstLineInLatestLogs);
+	}
 
-	/**
-	 * @return An URI into this server.
-	 */
-	URI getURI();
-
-	URI getDirectBoltUri();
+	private WaitForMessageInLatestLogs(String query, String firstLineInLatestLogs) {
+		super(query, firstLineInLatestLogs);
+	}
 }
