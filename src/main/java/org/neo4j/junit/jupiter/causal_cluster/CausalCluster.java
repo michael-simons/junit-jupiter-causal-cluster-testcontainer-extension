@@ -18,44 +18,34 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import java.net.URI;
-import java.util.Collection;
-
-import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.Neo4jContainer;
-import org.testcontainers.containers.SocatContainer;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * This allows us to interact with the Neo4j Causal Cluster
+ * Marks a field as an injection point for a Neo4j Causal Cluster.
+ * The cluster will be started before all tests and be shutdown, including all servers, after the test.
+ * The following list shows valid injection points:
+ * <dl>
+ *     <dt><code>@CausalCluster String uri</code></dt>
+ *     <dd>Injects a random, externally accessible URI as a {@link String}.</dd>
+ *     <dt><code>@CausalCluster URI uri</code></dt>
+ *     <dd>Injects a random, externally accessible URI as an {@link java.net.URI}.</dd>
+ *     <dt><code>@CausalCluster List&lt;String&gt; uris</code></dt>
+ *     <dd>Injects all externally accessible URIs as {@link String strings}</dd>
+ *     <dt><code>@CausalCluster List&lt;URI&gt; uris</code></dt>
+ *     <dd>Injects all externally accessible URIs as {@link java.net.URI uris}</dd>
+ *     <dt><code>@CausalCluster Neo4jCluster cluster</code></dt>
+ *     <dd>Injects the complete cluster for advanced tests as {@link Neo4jCluster}</dd>
+ * </dl>
  *
  * @author Michael J. Simons
+ * @author Andrew Jefferson
  */
-class CausalCluster implements CloseableResource {
-
-	private final SocatContainer boltProxy;
-	private final Collection<Neo4jContainer> clusterMembers;
-	private final int boltPort;
-
-	CausalCluster(SocatContainer boltProxy, int boltPort, Collection<Neo4jContainer> clusterMembers) {
-
-		this.boltProxy = boltProxy;
-		this.clusterMembers = clusterMembers;
-		this.boltPort = boltPort;
-	}
-
-	public URI getURI() {
-		return URI.create(String.format(
-			"neo4j://%s:%d",
-			boltProxy.getContainerIpAddress(),
-			boltProxy.getMappedPort(boltPort)
-		));
-	}
-
-	@Override
-	public void close() {
-
-		boltProxy.stop();
-		clusterMembers.forEach(GenericContainer::stop);
-	}
+@Target({ ElementType.FIELD })
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface CausalCluster {
 }

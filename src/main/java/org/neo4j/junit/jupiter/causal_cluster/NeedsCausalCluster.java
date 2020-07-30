@@ -51,7 +51,7 @@ public @interface NeedsCausalCluster {
 	String customImageName() default "";
 
 	/**
-	 * Startup timeout for the cluster. Defaults to 5 minutes.
+	 * @return Startup timeout for the cluster. Defaults to 5 minutes.
 	 */
 	long startupTimeOutInMillis() default CausalClusterExtension.DEFAULT_STARTUP_TIMEOUT_IN_MILLIS;
 

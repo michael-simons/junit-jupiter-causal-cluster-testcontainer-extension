@@ -1,21 +1,42 @@
+/*
+ * Copyright (c) 2019-2020 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ *
+ * This file is part of Neo4j.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.neo4j.junit.jupiter.causal_cluster;
 
 import static java.util.stream.Collectors.*;
 
+import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.IntStream;
 
 import org.testcontainers.containers.Neo4jContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.SocatContainer;
 
 /**
- * This takes care of all the containers started.
+ * Creates new cluster instances.
  *
  * @author Michael J. Simons
+ * @author Andrew Jefferson
  */
-final class CausalClusterFactory {
+final class ClusterFactory {
 
 	private static final int DEFAULT_BOLT_PORT = 7687;
 
@@ -23,11 +44,11 @@ final class CausalClusterFactory {
 
 	private SocatContainer boltProxy;
 
-	CausalClusterFactory(Configuration configuration) {
+	ClusterFactory(Configuration configuration) {
 		this.configuration = configuration;
 	}
 
-	CausalCluster start() {
+	Neo4jCluster createCluster() {
 
 		final int numberOfCoreMembers = configuration.getNumberOfCoreMembers();
 
@@ -51,7 +72,7 @@ final class CausalClusterFactory {
 
 		final boolean is35 = configuration.getNeo4jVersion().startsWith("3.5");
 		// Build the cluster
-		final List<Neo4jContainer> cluster = configuration.iterateCoreMembers()
+		final List<Neo4jContainer<?>> cluster = configuration.iterateCoreMembers()
 			.map(member -> new Neo4jContainer<>(configuration.getImageName())
 				.withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
 				.withAdminPassword(configuration.getPassword())
@@ -90,6 +111,18 @@ final class CausalClusterFactory {
 			e.printStackTrace();
 		}
 
-		return new CausalCluster(boltProxy, DEFAULT_BOLT_PORT, cluster);
+		List<DefaultNeo4jServer> neo4jCores = IntStream.range(0, cluster.size())
+			.mapToObj(idx -> new DefaultNeo4jServer(cluster.get(idx), getNeo4jUri(DEFAULT_BOLT_PORT + idx)))
+			.collect(toList());
+
+		return new DefaultCluster(boltProxy, neo4jCores);
+	}
+
+	private URI getNeo4jUri(int boltPort) {
+		return URI.create(String.format(
+			"neo4j://%s:%d",
+			boltProxy.getContainerIpAddress(),
+			boltProxy.getMappedPort(boltPort)
+		));
 	}
 }
