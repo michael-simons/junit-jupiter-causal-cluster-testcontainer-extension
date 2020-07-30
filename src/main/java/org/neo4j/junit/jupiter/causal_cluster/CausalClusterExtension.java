@@ -158,7 +158,7 @@ class CausalClusterExtension implements BeforeAllCallback {
 		return new ExtensionConfigurationException(message);
 	}
 
-	private static Neo4jCluster getOrCreateCausalCluster(ExtensionContext extensionContext) {
+	private static Neo4jCluster getOrCreateCluster(ExtensionContext extensionContext) {
 
 		ExtensionContext.Store store = extensionContext.getStore(NAMESPACE);
 		Configuration configuration = store
@@ -170,7 +170,7 @@ class CausalClusterExtension implements BeforeAllCallback {
 
 	private static Object getInjectableValue(Class<?> type, ExtensionContext extensionContext) {
 
-		Neo4jCluster cluster = getOrCreateCausalCluster(extensionContext);
+		Neo4jCluster cluster = getOrCreateCluster(extensionContext);
 		if (type == Neo4jCluster.class) {
 			return cluster;
 		} else {
@@ -181,7 +181,7 @@ class CausalClusterExtension implements BeforeAllCallback {
 
 	private static Object getURIs(Type collectionType, ExtensionContext extensionContext) {
 
-		Collection<URI> uris = getOrCreateCausalCluster(extensionContext).getURIs();
+		Collection<URI> uris = getOrCreateCluster(extensionContext).getURIs();
 		return collectionType == URI.class ? uris : uris.stream().map(URI::toString).collect(Collectors.toList());
 	}
 }
