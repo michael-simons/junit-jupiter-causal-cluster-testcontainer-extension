@@ -50,7 +50,6 @@
 		<checkstyle.version>8.35</checkstyle.version>
 		<java.version>1.8</java.version>
 		<junit-jupiter.version>5.6.2</junit-jupiter.version>
-		<lombok.version>1.18.12</lombok.version>
 		<maven-checkstyle-plugin.version>3.1.1</maven-checkstyle-plugin.version>
 		<maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
 		<maven-enforcer-plugin.version>3.0.0-M3</maven-enforcer-plugin.version>
@@ -125,12 +124,6 @@
 			<artifactId>neo4j-java-driver</artifactId>
 			<version>${neo4j-java-driver.version}</version>
 			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<version>${lombok.version}</version>
 		</dependency>
 
 		<dependency>

@@ -18,11 +18,6 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.With;
-
 import java.io.Serializable;
 import java.time.Duration;
 import java.util.AbstractMap;
@@ -37,11 +32,7 @@ import java.util.stream.Stream;
  *
  * @author Michael J. Simons
  */
-@RequiredArgsConstructor
-@Getter
-@With
-@ToString
-class Configuration implements Serializable {
+final class Configuration implements Serializable {
 
 	private final String neo4jVersion;
 
@@ -62,6 +53,18 @@ class Configuration implements Serializable {
 	 */
 	private final String customImageName;
 
+	Configuration(String neo4jVersion, int numberOfCoreMembers, int numberOfReadReplicas,
+		Duration startupTimeout, String password, int initialHeapSize, int pagecacheSize, String customImageName) {
+		this.neo4jVersion = neo4jVersion;
+		this.numberOfCoreMembers = numberOfCoreMembers;
+		this.numberOfReadReplicas = numberOfReadReplicas;
+		this.startupTimeout = startupTimeout;
+		this.password = password;
+		this.initialHeapSize = initialHeapSize;
+		this.pagecacheSize = pagecacheSize;
+		this.customImageName = customImageName;
+	}
+
 	Stream<Map.Entry<Integer, String>> iterateCoreMembers() {
 		final IntFunction<String> generateInstanceName = i -> String.format("neo4j%d", i);
 
@@ -72,5 +75,101 @@ class Configuration implements Serializable {
 	String getImageName() {
 		return Optional.ofNullable(customImageName).filter(s -> !s.isEmpty())
 			.orElseGet(() -> String.format("neo4j:%s-enterprise", neo4jVersion));
+	}
+
+	public String getNeo4jVersion() {
+		return this.neo4jVersion;
+	}
+
+	public int getNumberOfCoreMembers() {
+		return this.numberOfCoreMembers;
+	}
+
+	public int getNumberOfReadReplicas() {
+		return this.numberOfReadReplicas;
+	}
+
+	public Duration getStartupTimeout() {
+		return this.startupTimeout;
+	}
+
+	public String getPassword() {
+		return this.password;
+	}
+
+	public int getInitialHeapSize() {
+		return this.initialHeapSize;
+	}
+
+	public int getPagecacheSize() {
+		return this.pagecacheSize;
+	}
+
+	public String getCustomImageName() {
+		return this.customImageName;
+	}
+
+	public Configuration withNeo4jVersion(String newNeo4jVersion) {
+		return this.neo4jVersion == newNeo4jVersion ?
+			this :
+			new Configuration(newNeo4jVersion, this.numberOfCoreMembers, this.numberOfReadReplicas, this.startupTimeout,
+				this.password, this.initialHeapSize, this.pagecacheSize, this.customImageName);
+	}
+
+	public Configuration withNumberOfCoreMembers(int newNumberOfCoreMembers) {
+		return this.numberOfCoreMembers == newNumberOfCoreMembers ?
+			this :
+			new Configuration(this.neo4jVersion, newNumberOfCoreMembers, this.numberOfReadReplicas, this.startupTimeout,
+				this.password, this.initialHeapSize, this.pagecacheSize, this.customImageName);
+	}
+
+	public Configuration withNumberOfReadReplicas(int newNumberOfReadReplicas) {
+		return this.numberOfReadReplicas == newNumberOfReadReplicas ?
+			this :
+			new Configuration(this.neo4jVersion, this.numberOfCoreMembers, newNumberOfReadReplicas, this.startupTimeout,
+				this.password, this.initialHeapSize, this.pagecacheSize, this.customImageName);
+	}
+
+	public Configuration withStartupTimeout(Duration newStartupTimeout) {
+		return this.startupTimeout == newStartupTimeout ?
+			this :
+			new Configuration(this.neo4jVersion, this.numberOfCoreMembers, this.numberOfReadReplicas, newStartupTimeout,
+				this.password, this.initialHeapSize, this.pagecacheSize, this.customImageName);
+	}
+
+	public Configuration withPassword(String newPassword) {
+		return this.password == newPassword ?
+			this :
+			new Configuration(this.neo4jVersion, this.numberOfCoreMembers, this.numberOfReadReplicas,
+				this.startupTimeout, newPassword, this.initialHeapSize, this.pagecacheSize, this.customImageName);
+	}
+
+	public Configuration withInitialHeapSize(int newInitialHeapSize) {
+		return this.initialHeapSize == newInitialHeapSize ?
+			this :
+			new Configuration(this.neo4jVersion, this.numberOfCoreMembers, this.numberOfReadReplicas,
+				this.startupTimeout, this.password, newInitialHeapSize, this.pagecacheSize, this.customImageName);
+	}
+
+	public Configuration withPagecacheSize(int newPagecacheSize) {
+		return this.pagecacheSize == newPagecacheSize ?
+			this :
+			new Configuration(this.neo4jVersion, this.numberOfCoreMembers, this.numberOfReadReplicas,
+				this.startupTimeout, this.password, this.initialHeapSize, newPagecacheSize, this.customImageName);
+	}
+
+	public Configuration withCustomImageName(String newCustomImageName) {
+		return this.customImageName == newCustomImageName ?
+			this :
+			new Configuration(this.neo4jVersion, this.numberOfCoreMembers, this.numberOfReadReplicas,
+				this.startupTimeout, this.password, this.initialHeapSize, this.pagecacheSize, newCustomImageName);
+	}
+
+	public String toString() {
+		return "Configuration(neo4jVersion=" + this.getNeo4jVersion() + ", numberOfCoreMembers=" + this
+			.getNumberOfCoreMembers() + ", numberOfReadReplicas=" + this.getNumberOfReadReplicas() + ", startupTimeout="
+			+ this.getStartupTimeout() + ", password=" + this.getPassword() + ", initialHeapSize=" + this
+			.getInitialHeapSize() + ", pagecacheSize=" + this.getPagecacheSize() + ", customImageName=" + this
+			.getCustomImageName() + ")";
 	}
 }
