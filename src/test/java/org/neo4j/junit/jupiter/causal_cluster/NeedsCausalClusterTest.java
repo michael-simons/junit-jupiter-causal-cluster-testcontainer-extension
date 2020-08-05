@@ -18,8 +18,7 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.platform.engine.discovery.DiscoverySelectors.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -33,6 +32,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.platform.engine.discovery.DiscoverySelectors;
 import org.junit.platform.testkit.engine.EngineTestKit;
 import org.junit.platform.testkit.engine.Events;
 import org.neo4j.driver.AuthTokens;
@@ -55,13 +55,13 @@ class NeedsCausalClusterTest {
 		void shouldWorkWithIntendedUsage() {
 			Events testEvents = EngineTestKit.engine(ENGINE_ID)
 				.selectors(
-					selectClass(StaticUriFieldOnPerMethodLifecycleTest.class),
-					selectClass(StaticCollectionFieldOnPerMethodLifecycleTest.class),
-					selectClass(StaticClusterFieldOnPerMethodLifecycleTest.class),
-					selectClass(InstanceUriFieldInPerClassLifecycleTest.class),
-					selectClass(InstanceCollectionFieldInPerClassLifecycleTest.class),
-					selectClass(InstanceClusterFieldInPerClassLifecycleTest.class),
-					selectClass(NestedClassWithAllNeededAnnotationsTest.class)
+					DiscoverySelectors.selectClass(StaticUriFieldOnPerMethodLifecycleTest.class),
+					DiscoverySelectors.selectClass(StaticCollectionFieldOnPerMethodLifecycleTest.class),
+					DiscoverySelectors.selectClass(StaticClusterFieldOnPerMethodLifecycleTest.class),
+					DiscoverySelectors.selectClass(InstanceUriFieldInPerClassLifecycleTest.class),
+					DiscoverySelectors.selectClass(InstanceCollectionFieldInPerClassLifecycleTest.class),
+					DiscoverySelectors.selectClass(InstanceClusterFieldInPerClassLifecycleTest.class),
+					DiscoverySelectors.selectClass(NestedClassWithAllNeededAnnotationsTest.class)
 				)
 				.execute().testEvents();
 
@@ -75,14 +75,14 @@ class NeedsCausalClusterTest {
 		void shouldNotStartMultipleClusters() {
 			Events testEvents = EngineTestKit.engine(ENGINE_ID)
 				.selectors(
-					selectClass(MultipleCollectionInjectionPointsPerMethodLifeCycleTest.class),
-					selectClass(MultipleUriInjectionPointsPerMethodLifeCycleTest.class),
-					selectClass(MultipleClusterInjectionPointsPerMethodLifeCycleTest.class),
-					selectClass(MultipleInjectionPointsDifferentTypePerMethodLifeCycleTest.class),
-					selectClass(MultipleCollectionInjectionPointsPerClassLifeCycleTest.class),
-					selectClass(MultipleUriInjectionPointsPerClassLifeCycleTest.class),
-					selectClass(MultipleClusterInjectionPointsPerClassLifeCycleTest.class),
-					selectClass(MultipleInjectionPointsDifferentTypePerClassLifeCycleTest.class)
+					DiscoverySelectors.selectClass(MultipleCollectionInjectionPointsPerMethodLifeCycleTest.class),
+					DiscoverySelectors.selectClass(MultipleUriInjectionPointsPerMethodLifeCycleTest.class),
+					DiscoverySelectors.selectClass(MultipleClusterInjectionPointsPerMethodLifeCycleTest.class),
+					DiscoverySelectors.selectClass(MultipleInjectionPointsDifferentTypePerMethodLifeCycleTest.class),
+					DiscoverySelectors.selectClass(MultipleCollectionInjectionPointsPerClassLifeCycleTest.class),
+					DiscoverySelectors.selectClass(MultipleUriInjectionPointsPerClassLifeCycleTest.class),
+					DiscoverySelectors.selectClass(MultipleClusterInjectionPointsPerClassLifeCycleTest.class),
+					DiscoverySelectors.selectClass(MultipleInjectionPointsDifferentTypePerClassLifeCycleTest.class)
 				)
 				.execute().testEvents();
 
@@ -100,9 +100,9 @@ class NeedsCausalClusterTest {
 		void shouldNotWorkWithInvalidUsage() {
 			Events testEvents = EngineTestKit.engine(ENGINE_ID)
 				.selectors(
-					selectClass(MissingExtensionTest.class),
-					selectClass(MissingInjectionPoint.class),
-					selectClass(LifecyleOnOuterClass.class))
+					DiscoverySelectors.selectClass(MissingExtensionTest.class),
+					DiscoverySelectors.selectClass(MissingInjectionPoint.class),
+					DiscoverySelectors.selectClass(LifecyleOnOuterClass.class))
 				.execute().testEvents();
 
 			assertThat(testEvents.succeeded().stream().collect(Collectors.toList()))
@@ -115,11 +115,11 @@ class NeedsCausalClusterTest {
 		void shouldCheckTypeOfInjectionPoint() {
 			Events testEvents = EngineTestKit.engine(ENGINE_ID)
 				.selectors(
-					selectClass(WrongUriExtensionPoint.class),
-					selectClass(WrongUriCollectionExtensionPoint.class),
-					selectClass(WrongCollectionSubclass1ExtensionPoint.class),
-					selectClass(WrongCollectionSubclass2ExtensionPoint.class),
-					selectClass(WrongClusterExtensionPoint.class)
+					DiscoverySelectors.selectClass(WrongUriExtensionPoint.class),
+					DiscoverySelectors.selectClass(WrongUriCollectionExtensionPoint.class),
+					DiscoverySelectors.selectClass(WrongCollectionSubclass1ExtensionPoint.class),
+					DiscoverySelectors.selectClass(WrongCollectionSubclass2ExtensionPoint.class),
+					DiscoverySelectors.selectClass(WrongClusterExtensionPoint.class)
 				)
 				.execute().testEvents();
 

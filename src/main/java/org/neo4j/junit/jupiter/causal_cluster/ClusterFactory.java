@@ -18,12 +18,11 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import static java.util.stream.Collectors.*;
-
 import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.testcontainers.containers.Neo4jContainer;
@@ -58,7 +57,7 @@ final class ClusterFactory {
 		// Setup a naming strategy and the initial discovery members
 		final String initialDiscoveryMembers = configuration.iterateCoreMembers()
 			.map(n -> String.format("%s:5000", n.getValue()))
-			.collect(joining(","));
+			.collect(Collectors.joining(","));
 
 		// Prepare proxy to enter the cluster
 		boltProxy = new SocatContainer().withNetwork(network);
@@ -96,7 +95,7 @@ final class ClusterFactory {
 				.withNeo4jConfig("causal_clustering.minimum_core_cluster_size_at_runtime",
 					Integer.toString(numberOfCoreMembers))
 				.withStartupTimeout(configuration.getStartupTimeout()))
-			.collect(toList());
+			.collect(Collectors.toList());
 
 		// Start all of them in parallel
 		final CountDownLatch latch = new CountDownLatch(numberOfCoreMembers);
@@ -113,7 +112,7 @@ final class ClusterFactory {
 
 		List<DefaultNeo4jServer> neo4jCores = IntStream.range(0, cluster.size())
 			.mapToObj(idx -> new DefaultNeo4jServer(cluster.get(idx), getNeo4jUri(DEFAULT_BOLT_PORT + idx)))
-			.collect(toList());
+			.collect(Collectors.toList());
 
 		return new DefaultCluster(boltProxy, neo4jCores);
 	}

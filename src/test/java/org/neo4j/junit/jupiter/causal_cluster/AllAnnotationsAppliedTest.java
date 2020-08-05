@@ -18,7 +18,7 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.reflect.Field;
 import java.net.URI;
@@ -33,7 +33,7 @@ import org.junit.platform.commons.util.ReflectionUtils;
 import org.testcontainers.containers.Neo4jContainer;
 
 @NeedsCausalCluster
-public class AllAnnotationsAppliedTest {
+class AllAnnotationsAppliedTest {
 
 	@CausalCluster
 	static String clusterUriString;
