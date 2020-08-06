@@ -18,9 +18,6 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import static java.util.stream.Collectors.*;
-import static org.testcontainers.containers.output.OutputFrame.OutputType.*;
-
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
@@ -36,12 +33,14 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import org.testcontainers.containers.Neo4jContainer;
 import org.testcontainers.containers.SocatContainer;
+import org.testcontainers.containers.output.OutputFrame;
 import org.testcontainers.containers.output.WaitingConsumer;
 import org.testcontainers.containers.wait.strategy.WaitStrategy;
 
@@ -88,7 +87,12 @@ final class DefaultCluster implements Neo4jCluster, CloseableResource {
 
 	@Override
 	public Set<Neo4jServer> getAllServersExcept(Set<Neo4jServer> exclusions) {
-		return clusterServers.stream().filter(c -> !exclusions.contains(c)).collect(Collectors.toSet());
+
+		return clusterServers.stream().filter(with(exclusions)).collect(Collectors.toSet());
+	}
+
+	static private Predicate<DefaultNeo4jServer> with(Set<Neo4jServer> excludedServers) {
+		return c -> !excludedServers.contains(c);
 	}
 
 	@Override
@@ -100,11 +104,11 @@ final class DefaultCluster implements Neo4jCluster, CloseableResource {
 	public Set<Neo4jServer> stopRandomServersExcept(int n, Set<Neo4jServer> exclusions) {
 		List<Neo4jServer> chosenServers = chooseRandomServers(n, exclusions);
 
-		return doToServers(chosenServers, server -> {
+		return doWithServers(chosenServers, server -> {
 			Neo4jContainer<?> container = unwrap(server);
 
 			WaitingConsumer consumer = new WaitingConsumer();
-			container.followOutput(consumer, STDOUT);
+			container.followOutput(consumer, OutputFrame.OutputType.STDOUT);
 
 			int timeoutSeconds = Math.toIntExact(NEO4J_CONTAINER_STOP_TIMEOUT.toMillis() / 1000);
 			container.getDockerClient().stopContainerCmd(container.getContainerId())
@@ -121,12 +125,12 @@ final class DefaultCluster implements Neo4jCluster, CloseableResource {
 			}
 
 			return server;
-		}).collect(toSet());
+		}).collect(Collectors.toSet());
 	}
 
 	@Override
 	public Set<Neo4jServer> startServers(Set<Neo4jServer> servers) {
-		return doToServers(servers, server -> {
+		return doWithServers(servers, server -> {
 			Neo4jContainer<?> container = unwrap(server);
 			assert !container.isRunning();
 
@@ -142,7 +146,8 @@ final class DefaultCluster implements Neo4jCluster, CloseableResource {
 
 			It's up to the user to block until bolt is available if that is their expectation/requirement in tests.
 			 */
-			WaitStrategy ws = WaitForLogMessageAfter.lastTimestampedLine(NEO4J_CONTAINER_START_MESSAGE, server);
+			WaitStrategy ws = WaitForLogMessageAfter
+				.waitForLogMessageAfterRestart(NEO4J_CONTAINER_START_MESSAGE, server);
 
 			container.getDockerClient().startContainerCmd(container.getContainerId()).exec();
 
@@ -156,7 +161,7 @@ final class DefaultCluster implements Neo4jCluster, CloseableResource {
 
 			return server;
 
-		}).collect(toSet());
+		}).collect(Collectors.toSet());
 	}
 
 	@Override
@@ -165,25 +170,25 @@ final class DefaultCluster implements Neo4jCluster, CloseableResource {
 
 		Instant deadline = Instant.now().plus(timeout);
 
-		// TODO: can we implement early stopping if any of these fail?
-		List<? extends Exception> errors = doToServers(servers, (server) -> {
+		// TODO can we implement early stopping if any of these fail?
+		List<? extends Exception> errors = doWithServers(servers, (server) -> {
 			try {
 				Neo4jContainer<?> container = unwrap(server);
 				if (!container.isRunning()) {
 					return new IllegalStateException(
 						"Server is not running. Cannot wait for logs on a non running server");
 				}
-				WaitForMessageInLatestLogs.build(message, server)
+				WaitForLogMessageAfter.waitForMessageInLatestLogs(message, server)
 					.withStartupTimeout(Duration.between(Instant.now(), deadline))
 					.waitUntilReady(container);
 				return null;
 			} catch (WaitForLogMessageAfter.NotFoundException e) {
 				return e;
 			}
-		}).filter(Objects::nonNull).collect(toList());
+		}).filter(Objects::nonNull).collect(Collectors.toList());
 
 		if (!errors.isEmpty()) {
-			// TODO: aggregate all the errors properly
+			// TODO aggregate all the errors properly
 
 			// prioritise throwing any IllegalStateException
 			for (Exception e : errors) {
@@ -203,10 +208,10 @@ final class DefaultCluster implements Neo4jCluster, CloseableResource {
 		Instant deadline = Instant.now().plus(timeout);
 		waitForLogMessageOnAll(servers, NEO4J_BOLT_UP_MESSAGE, timeout);
 
-		List<Neo4jServer> unreachableServers = doToServers(servers, (server) -> {
+		List<Neo4jServer> unreachableServers = doWithServers(servers, (server) -> {
 			Duration remainingTime = Duration.between(Instant.now(), deadline);
 			return new BoltHandshaker(server).isBoltPortReachable(remainingTime) ? null : server;
-		}).filter(Objects::nonNull).collect(toList());
+		}).filter(Objects::nonNull).collect(Collectors.toList());
 
 		if (!unreachableServers.isEmpty()) {
 			String message = String.format(
@@ -265,33 +270,31 @@ final class DefaultCluster implements Neo4jCluster, CloseableResource {
 		return randomServers(n, Collections.emptySet());
 	}
 
-	private Stream<Neo4jServer> randomServers(int n, Set<Neo4jServer> excluding) {
+	private Stream<Neo4jServer> randomServers(int n, Set<Neo4jServer> exclusions) {
 
-		List<Neo4jServer> candidates = clusterServers.stream().filter(c -> !excluding.contains(c)).collect(toList());
+		List<Neo4jServer> candidates = clusterServers.stream().filter(with(exclusions)).collect(
+			Collectors.toList());
 		int N = candidates.size();
 		if (n > N) {
 			throw new IllegalArgumentException("There are not enough valid members in the cluster.");
 		} else if (n == N) {
 			return candidates.stream();
 		}
-		Set<Neo4jServer> chosen = new HashSet<>(n);
 
+		Set<Neo4jServer> chosen = new HashSet<>(n);
 		while (chosen.size() < n) {
-			Neo4jServer chosenServer = candidates.get(ThreadLocalRandom.current().nextInt(0, N));
-			if (!excluding.contains(chosenServer)) {
-				chosen.add(chosenServer);
-			}
+			chosen.add(candidates.get(ThreadLocalRandom.current().nextInt(0, N)));
 		}
 
 		return chosen.stream();
 	}
 
 	private List<Neo4jServer> chooseRandomServers(int n) {
-		return randomServers(n).collect(toList());
+		return randomServers(n).collect(Collectors.toList());
 	}
 
 	private List<Neo4jServer> chooseRandomServers(int n, Set<Neo4jServer> excluding) {
-		return randomServers(n, excluding).collect(toList());
+		return randomServers(n, excluding).collect(Collectors.toList());
 	}
 
 	/**
@@ -303,13 +306,12 @@ final class DefaultCluster implements Neo4jCluster, CloseableResource {
 	 * @param <T>     operation return type
 	 * @return A Stream of the operation results
 	 */
-	private static <T> Stream<T> doToServers(Collection<Neo4jServer> Servers, Function<Neo4jServer, T> fn) {
+	private static <T> Stream<T> doWithServers(Collection<Neo4jServer> Servers, Function<Neo4jServer, T> fn) {
 
-		// TODO: better error handling
+		// TODO better error handling
 		final CountDownLatch latch = new CountDownLatch(Servers.size());
 
-		// TODO: use an explicit Executor instead of dropping it on the shared FJP so we can keep track of better manage
-		// tasks.
+		// TODO use an explicit Executor instead of dropping it on the shared FJP so we can keep track of better manage tasks.
 		List<CompletableFuture<T>> futures = Servers.stream()
 			.map(server -> CompletableFuture.supplyAsync(() -> {
 				try {
@@ -317,7 +319,7 @@ final class DefaultCluster implements Neo4jCluster, CloseableResource {
 				} finally {
 					latch.countDown();
 				}
-			})).collect(toList());
+			})).collect(Collectors.toList());
 
 		try {
 			latch.await();

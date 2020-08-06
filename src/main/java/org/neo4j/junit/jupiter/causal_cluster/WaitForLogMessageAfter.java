@@ -28,21 +28,66 @@ import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.output.OutputFrame;
 import org.testcontainers.containers.output.WaitingConsumer;
 import org.testcontainers.containers.wait.strategy.AbstractWaitStrategy;
+import org.testcontainers.containers.wait.strategy.WaitStrategy;
 import org.testcontainers.utility.LogUtils;
 
-public class WaitForLogMessageAfter extends AbstractWaitStrategy {
+final class WaitForLogMessageAfter extends AbstractWaitStrategy {
 
-	protected final static Pattern startsWithATimestampPattern = Pattern.compile(
+	protected final static Pattern STARTS_WITH_A_TIMESTAMP_PATTERN = Pattern.compile(
 		"^\\d{4}\\-\\d{2}\\-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{1,4}.*$",
 		Pattern.MULTILINE
 	);
-	private static final int neo4J_timestamp_length = 29;
+	private static final int NEO_4_J_TIMESTAMP_LENGTH = 29;
 
-	// TODO: support making the query a regex?
+	// TODO support making the query a regex?
 	private final String query;
 	private final WaitPredicate waitPredicate;
 
-	public WaitForLogMessageAfter(String query, String afterLine) {
+	/**
+	 * Creates a {@link WaitStrategy} that waits for a given line to appear after the last log line that was recorded
+	 * before the server in question had been restarted.
+	 *
+	 * @param line   The line that has to appear in the logs.
+	 * @param server The server in question.
+	 * @return A wait strategy
+	 */
+	static WaitStrategy waitForLogMessageAfterRestart(String line, Neo4jServer server) {
+
+		Matcher matcher = STARTS_WITH_A_TIMESTAMP_PATTERN.matcher(server.getContainerLogsSinceStart());
+		String lastMatchingLine = null;
+
+		// Get the last matching line, there doesn't seem to be a better method than looping over every match
+		while (matcher.find()) {
+			lastMatchingLine = matcher.group();
+		}
+		if (lastMatchingLine == null) {
+			throw new IllegalStateException(
+				"Container has no existing logs starting with a recognisable timestamp. Did Neo4j fail to start?");
+		}
+		return new WaitForLogMessageAfter(line, lastMatchingLine);
+	}
+
+	/**
+	 * Creates a {@link WaitStrategy} that waits for the given query to appear in the latest logs of the given server.
+	 *
+	 * @param line   The line that has to appear in the logs.
+	 * @param server The server in question.
+	 * @return A wait strategy
+	 */
+	static WaitStrategy waitForMessageInLatestLogs(String line, Neo4jServer server) {
+
+		Matcher matcher = STARTS_WITH_A_TIMESTAMP_PATTERN.matcher(server.getContainerLogsSinceStart());
+		String firstLineInLatestLogs = matcher.find() ? matcher.group() : null;
+
+		if (firstLineInLatestLogs == null) {
+			throw new RuntimeException("Unable to determine first timestamp in latest logs for "
+				+ server.getURI().toString());
+		}
+
+		return new WaitForLogMessageAfter(line, firstLineInLatestLogs);
+	}
+
+	private WaitForLogMessageAfter(String query, String afterLine) {
 
 		this.query = query;
 
@@ -84,15 +129,15 @@ public class WaitForLogMessageAfter extends AbstractWaitStrategy {
 		private final String afterTimestamp;
 
 		private WaitPredicate(String afterThisLine, String query) {
-			this.afterTimestamp = afterThisLine.trim().substring(0, neo4J_timestamp_length);
+			this.afterTimestamp = afterThisLine.trim().substring(0, NEO_4_J_TIMESTAMP_LENGTH);
 			this.query = query;
 		}
 
 		@Override
 		public boolean test(OutputFrame outputFrame) {
-			String utf8String = outputFrame.getUtf8String();
+			String frameAsString = outputFrame.getUtf8String();
 
-			for (String line : utf8String.split("\n")) {
+			for (String line : frameAsString.split("\n")) {
 				if (line.contains(query)) {
 					if (!lineStartsWithATimestamp(line)) {
 						String message = "log queries must match neo4j logs that include a preceding timestamp. "
@@ -104,7 +149,7 @@ public class WaitForLogMessageAfter extends AbstractWaitStrategy {
 					// chronological order.
 					// So the only way that I could figure out to be sure that the query line happened _after_
 					// afterThisLine is to compare the neo4j timestamps
-					String lineTimestamp = line.trim().substring(0, neo4J_timestamp_length);
+					String lineTimestamp = line.trim().substring(0, NEO_4_J_TIMESTAMP_LENGTH);
 					if (lineTimestamp.compareTo(afterTimestamp) > 0) {
 						return true;
 					}
@@ -115,26 +160,7 @@ public class WaitForLogMessageAfter extends AbstractWaitStrategy {
 	}
 
 	private static boolean lineStartsWithATimestamp(String line) {
-		return startsWithATimestampPattern.matcher(line).matches();
-	}
-
-	/**
-	 * Only used internally to find logs that are after the last log line recorded _before_ the container is restarted.
-	 */
-	static WaitForLogMessageAfter lastTimestampedLine(String query, Neo4jServer server) {
-
-		Matcher matcher = startsWithATimestampPattern.matcher(server.getLatestContainerLogs());
-		String lastMatchingLine = null;
-
-		// Get the last matching line, there doesn't seem to be a better method than looping over every match
-		while (matcher.find()) {
-			lastMatchingLine = matcher.group();
-		}
-		if (lastMatchingLine == null) {
-			throw new IllegalStateException(
-				"Container has no existing logs starting with a recognisable timestamp. Did Neo4j fail to start?");
-		}
-		return new WaitForLogMessageAfter(query, lastMatchingLine);
+		return STARTS_WITH_A_TIMESTAMP_PATTERN.matcher(line).matches();
 	}
 
 	static class NotFoundException extends RuntimeException {

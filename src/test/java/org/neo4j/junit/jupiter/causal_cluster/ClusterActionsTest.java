@@ -18,7 +18,9 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.URI;
 import java.time.Duration;
@@ -28,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.AfterEach;
@@ -44,7 +47,7 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.exceptions.Neo4jException;
 
 @NeedsCausalCluster()
-public class ClusterActionsTest {
+class ClusterActionsTest {
 
 	private final static String NEO4J_UP_MESSAGE = "Remote interface available at";
 	private final static String NEO4J_STOPPED_GRACEFULLY_MESSAGE = "Stopped.";
@@ -78,7 +81,7 @@ public class ClusterActionsTest {
 		Instant deadline = Instant.now().plus(Duration.ofMillis(stopMilliseconds));
 
 		// then
-		stopped.forEach(s -> assertThat(s.getLatestContainerLogs()).contains(NEO4J_STOPPED_GRACEFULLY_MESSAGE));
+		assertThat(stopped).hasSize(1).first().satisfies(logsSinceStartContainingStoppedMessage());
 		verifyAllServersConnectivity(cluster.getAllServersExcept(stopped));
 
 		Duration timeRemaining = Duration.between(Instant.now(), deadline);
@@ -96,20 +99,24 @@ public class ClusterActionsTest {
 		assertThat(started).containsExactlyInAnyOrderElementsOf(stopped);
 	}
 
+	private static Consumer<Neo4jServer> logsSinceStartContainingStoppedMessage() {
+		return s -> assertThat(s.getContainerLogsSinceStart()).contains(NEO4J_STOPPED_GRACEFULLY_MESSAGE);
+	}
+
 	@Test
 	void stopAllTest() throws Neo4jCluster.Neo4jTimeoutException {
 
 		// given
 		// I stop all the servers
-		Set<Neo4jServer> allServers = cluster.stopRandomServers(cluster.getAllServers().size());
+		Set<Neo4jServer> stoppedServers = cluster.stopRandomServers(cluster.getAllServers().size());
 
 		// then
-		allServers.forEach(s -> assertThat(s.getLatestContainerLogs()).contains(NEO4J_STOPPED_GRACEFULLY_MESSAGE));
+		assertThat(stoppedServers).allSatisfy(logsSinceStartContainingStoppedMessage());
 		assertThatThrownBy(this::verifyAnyServerNeo4jConnectivity).isInstanceOf(Neo4jException.class);
 
 		// when
-		cluster.startServers(allServers);
-		cluster.waitForBoltOnAll(allServers, Duration.ofMinutes(3));
+		cluster.startServers(stoppedServers);
+		cluster.waitForBoltOnAll(stoppedServers, Duration.ofMinutes(3));
 
 		// then
 		verifyAllServersConnectivity();
@@ -123,8 +130,7 @@ public class ClusterActionsTest {
 		String oldUpMessage = getNeo4jUpMessageLine(stopped.stream().findFirst().get());
 
 		// then
-		assertThatThrownBy(() -> waitForNeo4jUpMessage(stopped))
-			.isInstanceOf(IllegalStateException.class);
+		assertThatIllegalStateException().isThrownBy(() -> waitForNeo4jUpMessage(stopped));
 
 		// when
 		Set<Neo4jServer> started = cluster.startServers(stopped);
@@ -132,16 +138,14 @@ public class ClusterActionsTest {
 		waitForNeo4jUpMessage(started);
 
 		// then
-		started.forEach(s ->
-			assertThat(s.getLatestContainerLogs())
+		assertThat(started).allSatisfy(s -> {
+			assertThat(s.getContainerLogsSinceStart())
 				.contains(NEO4J_UP_MESSAGE)
-				.doesNotContain(oldUpMessage)
-		);
-		started.forEach(s ->
-			assertThat(s.getAllContainerLogs())
+				.doesNotContain(oldUpMessage);
+			assertThat(s.getContainerLogs())
 				.contains(NEO4J_UP_MESSAGE)
-				.contains(oldUpMessage)
-		);
+				.contains(oldUpMessage);
+		});
 		assertThatThrownBy(
 			() -> cluster.waitForLogMessageOnAll(started, oldUpMessage, Duration.ofSeconds(10))
 		).isInstanceOf(Neo4jCluster.Neo4jTimeoutException.class);
@@ -212,7 +216,7 @@ public class ClusterActionsTest {
 
 		// If we reach here they all failed. This assertion will fail and log the exceptions
 		if (!exceptions.isEmpty()) {
-			// TODO: aggregate exceptions properly
+			// TODO aggregate exceptions properly
 			throw exceptions.get(0);
 		}
 	}
@@ -242,7 +246,7 @@ public class ClusterActionsTest {
 	}
 
 	private static String getNeo4jUpMessageLine(Neo4jServer server) {
-		String oldLogs = server.getLatestContainerLogs();
+		String oldLogs = server.getContainerLogsSinceStart();
 		List<String> upMessages = Arrays.stream(oldLogs.split("\n")).filter(l -> l.contains(NEO4J_UP_MESSAGE))
 			.collect(Collectors.toList());
 		assertThat(upMessages).hasSize(1);

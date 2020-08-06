@@ -31,7 +31,7 @@ import java.time.Duration;
  *
  * @author Andrew Jefferson
  */
-public class BoltHandshaker {
+final class BoltHandshaker {
 	private static final int magicToken = 1616949271;
 
 	// Versions message that cannot be matched because it is all zeros.
@@ -44,7 +44,7 @@ public class BoltHandshaker {
 
 	private final Neo4jServer server;
 
-	public BoltHandshaker(Neo4jServer server) {
+	BoltHandshaker(Neo4jServer server) {
 		this.server = server;
 	}
 
@@ -83,7 +83,7 @@ public class BoltHandshaker {
 		}
 	}
 
-	public boolean isBoltPortReachable(Duration timeout) {
+	boolean isBoltPortReachable(Duration timeout) {
 		int timeoutMillis = Math.toIntExact(timeout.toMillis());
 		String address = server.getURI().getHost();
 		int port = server.getURI().getPort();

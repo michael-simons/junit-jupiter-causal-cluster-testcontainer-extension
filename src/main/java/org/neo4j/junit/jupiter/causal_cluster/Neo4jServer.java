@@ -26,14 +26,24 @@ import java.net.URI;
  * <a href="https://neo4j.com/docs/operations-manual/current/clustering/introduction/">the Neo4j introduction to clustering</a>.
  *
  * @author Michael J. Simons
+ * @author Andrew Jefferson
  */
 public interface Neo4jServer {
 
+	/**
+	 * @return The complete Neo4j debug logs.
+	 */
 	String getDebugLogs();
 
-	String getAllContainerLogs();
+	/**
+	 * @return The complete container logs.
+	 */
+	String getContainerLogs();
 
-	String getLatestContainerLogs();
+	/**
+	 * @return The container logs since Neo4j started.
+	 */
+	String getContainerLogsSinceStart();
 
 	/**
 	 * @return An URI into this server.

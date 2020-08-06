@@ -57,12 +57,12 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 	}
 
 	@Override
-	public String getAllContainerLogs() {
+	public String getContainerLogs() {
 		return container.getLogs();
 	}
 
 	@Override
-	public String getLatestContainerLogs() {
+	public String getContainerLogsSinceStart() {
 		String allLogs = container.getLogs();
 		return allLogs.substring(allLogs.lastIndexOf(START_TOKEN));
 	}
