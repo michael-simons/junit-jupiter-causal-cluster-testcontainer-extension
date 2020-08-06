@@ -19,9 +19,12 @@
 package org.neo4j.junit.jupiter.causal_cluster;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * This allows us to interact with a Neo4j Causal Cluster.
@@ -47,4 +50,76 @@ public interface Neo4jCluster {
 	 * @return The Neo4j servers contained by this cluster.
 	 */
 	Set<Neo4jServer> getAllServers();
+
+	/**
+	 * Retrieves all the servers of that cluster except the given exclusions.
+	 *
+	 * @param exclusions Servers not to return
+	 * @return A set of server that are part of this cluster.
+	 */
+	default Set<Neo4jServer> getAllServersExcept(Neo4jServer... exclusions) {
+		return getAllServersExcept(
+			exclusions == null ? Collections.emptySet() : Stream.of(exclusions).collect(Collectors.toSet()));
+	}
+
+	/**
+	 * Retrieves all the servers of that cluster except the given exclusions.
+	 *
+	 * @param exclusions Servers not to return
+	 * @return A set of server that are part of this cluster.
+	 */
+	Set<Neo4jServer> getAllServersExcept(Set<Neo4jServer> exclusions);
+
+	/**
+	 * Stops {@code n} random server.
+	 *
+	 * @param n The number of servers to stop
+	 * @return The stopped servers
+	 */
+	Set<Neo4jServer> stopRandomServers(int n);
+
+	/**
+	 * Stops {@code n} random server but none of the given exclusions.
+	 *
+	 * @param n          The number of servers to stop
+	 * @param exclusions Servers not to be stopped
+	 * @return The stopped servers
+	 */
+	default Set<Neo4jServer> stopRandomServersExcept(int n, Neo4jServer... exclusions) {
+		return stopRandomServersExcept(n,
+			exclusions == null ? Collections.emptySet() : Stream.of(exclusions).collect(Collectors.toSet()));
+	}
+
+	/**
+	 * Stops {@code n} random server but none of the given exclusions
+	 *
+	 * @param n          The number of servers to stop
+	 * @param exclusions Servers not to be stopped
+	 * @return The stopped servers
+	 */
+	Set<Neo4jServer> stopRandomServersExcept(int n, Set<Neo4jServer> exclusions);
+
+	/**
+	 * Starts the given set of servers.
+	 *
+	 * @param servers Servers to start
+	 * @return The started servers
+	 */
+	Set<Neo4jServer> startServers(Set<Neo4jServer> servers);
+
+	void waitForLogMessageOnAll(Set<Neo4jServer> servers, String message, Duration timeout)
+		throws Neo4jTimeoutException;
+
+	void waitForBoltOnAll(Set<Neo4jServer> servers, Duration timeout)
+		throws Neo4jTimeoutException;
+
+	/**
+	 * Thrown in case of time outs when dealing with the cluster or its servers.
+	 */
+	class Neo4jTimeoutException extends Exception {
+
+		Neo4jTimeoutException(Exception cause) {
+			super(cause);
+		}
+	}
 }

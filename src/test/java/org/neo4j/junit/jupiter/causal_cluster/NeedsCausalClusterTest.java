@@ -147,7 +147,6 @@ class NeedsCausalClusterTest {
 		try (Driver driver = GraphDatabase.driver(uri, AuthTokens.basic("neo4j", "password"))) {
 			driver.verifyConnectivity();
 		} catch (Exception e) {
-			e.printStackTrace();
 			throw e;
 		}
 	}

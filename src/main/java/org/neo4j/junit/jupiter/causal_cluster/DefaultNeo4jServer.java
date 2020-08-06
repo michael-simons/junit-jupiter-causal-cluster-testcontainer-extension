@@ -18,7 +18,9 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
+import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Objects;
 
 import org.testcontainers.containers.Neo4jContainer;
@@ -28,6 +30,8 @@ import org.testcontainers.containers.Neo4jContainer;
  * @author Michael J. Simons
  */
 final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
+
+	private final static String START_TOKEN = "Starting Neo4j.\n";
 
 	/**
 	 * The underlying test container instance.
@@ -44,11 +48,41 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 	}
 
 	@Override
+	public String getDebugLogs() {
+		try {
+			return container.execInContainer("cat /logs/debug.log").getStdout();
+		} catch (IOException | InterruptedException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	@Override
+	public String getContainerLogs() {
+		return container.getLogs();
+	}
+
+	@Override
+	public String getContainerLogsSinceStart() {
+		String allLogs = container.getLogs();
+		return allLogs.substring(allLogs.lastIndexOf(START_TOKEN));
+	}
+
+	@Override
 	public URI getURI() {
 		return externalURI;
 	}
 
-	@Override public boolean equals(Object o) {
+	@Override
+	public URI getDirectBoltUri() {
+		try {
+			return new URI(externalURI.toString().replace("neo4j://", "bolt://"));
+		} catch (URISyntaxException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	@Override
+	public boolean equals(Object o) {
 		if (this == o) {
 			return true;
 		}
@@ -60,12 +94,17 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 			externalURI.equals(that.externalURI);
 	}
 
-	@Override public int hashCode() {
+	@Override
+	public int hashCode() {
 		return Objects.hash(container, externalURI);
 	}
 
 	@Override
 	public void close() {
 		container.close();
+	}
+
+	Neo4jContainer<?> unwrap() {
+		return container;
 	}
 }
