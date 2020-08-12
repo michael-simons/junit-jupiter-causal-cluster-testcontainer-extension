@@ -31,6 +31,17 @@ import org.testcontainers.containers.Neo4jContainer;
  */
 final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 
+	private enum LogFile {
+		DEBUG("debug.log"),
+		QUERY("query.log");
+
+		final String name;
+
+		LogFile(String name) {
+			this.name = name;
+		}
+	}
+
 	private final static String START_TOKEN = "Starting Neo4j.\n";
 
 	/**
@@ -48,9 +59,19 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 	}
 
 	@Override
-	public String getDebugLogs() {
+	public String getDebugLog() {
+		return retrieveLogFile(LogFile.DEBUG);
+	}
+
+	@Override
+	public String getQueryLog() {
+		return retrieveLogFile(LogFile.QUERY);
+	}
+
+	private String retrieveLogFile(LogFile logFile) {
+
 		try {
-			return container.execInContainer("cat /logs/debug.log").getStdout();
+			return container.execInContainer("cat", "/logs/" + logFile.name).getStdout();
 		} catch (IOException | InterruptedException e) {
 			throw new RuntimeException(e);
 		}
