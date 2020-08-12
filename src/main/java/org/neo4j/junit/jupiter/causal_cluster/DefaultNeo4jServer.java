@@ -125,6 +125,11 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 		container.close();
 	}
 
+	@Override
+	public boolean isContainerRunning() {
+		return container.isRunning();
+	}
+
 	Neo4jContainer<?> unwrap() {
 		return container;
 	}

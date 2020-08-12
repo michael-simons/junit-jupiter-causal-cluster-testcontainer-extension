@@ -56,4 +56,9 @@ public interface Neo4jServer {
 	URI getURI();
 
 	URI getDirectBoltUri();
+
+	/**
+	 * @return True if the underlying container is running.
+	 */
+	boolean isContainerRunning();
 }
