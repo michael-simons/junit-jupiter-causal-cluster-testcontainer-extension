@@ -31,9 +31,14 @@ import java.net.URI;
 public interface Neo4jServer {
 
 	/**
-	 * @return The complete Neo4j debug logs.
+	 * @return The complete Neo4j debug log.
 	 */
-	String getDebugLogs();
+	String getDebugLog();
+
+	/**
+	 * @return The query log.
+	 */
+	String getQueryLog();
 
 	/**
 	 * @return The complete container logs.
