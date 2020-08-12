@@ -52,10 +52,15 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 	 * The external URI under which this server is reachable, not to be confused with the internal URI returned by {@link Neo4jContainer#getBoltUrl()}.
 	 */
 	private final URI externalURI;
+	/**
+	 * The type of this server.
+	 */
+	private final Role role;
 
-	DefaultNeo4jServer(Neo4jContainer<?> container, URI externalURI) {
+	DefaultNeo4jServer(Neo4jContainer<?> container, URI externalURI, Role role) {
 		this.container = container;
 		this.externalURI = externalURI;
+		this.role = role;
 	}
 
 	@Override
@@ -130,7 +135,21 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 		return container.isRunning();
 	}
 
+	@Override
+	public Role getRole() {
+		return role;
+	}
+
 	Neo4jContainer<?> unwrap() {
 		return container;
+	}
+
+	@Override
+	public String toString() {
+		return "DefaultNeo4jServer{" +
+			"container=" + container.getContainerId() +
+			", externalURI=" + externalURI +
+			", type=" + role +
+			'}';
 	}
 }

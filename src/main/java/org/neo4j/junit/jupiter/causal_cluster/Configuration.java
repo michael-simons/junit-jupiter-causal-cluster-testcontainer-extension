@@ -20,12 +20,7 @@ package org.neo4j.junit.jupiter.causal_cluster;
 
 import java.io.Serializable;
 import java.time.Duration;
-import java.util.AbstractMap;
-import java.util.Map;
 import java.util.Optional;
-import java.util.function.IntFunction;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 /**
  * The clusters configuration.
@@ -36,7 +31,7 @@ final class Configuration implements Serializable {
 
 	private final String neo4jVersion;
 
-	private final int numberOfCoreMembers;
+	private final int numberOfCoreServers;
 
 	private final int numberOfReadReplicas;
 
@@ -53,27 +48,16 @@ final class Configuration implements Serializable {
 	 */
 	private final String customImageName;
 
-	Configuration(String neo4jVersion, int numberOfCoreMembers, int numberOfReadReplicas,
+	Configuration(String neo4jVersion, int numberOfCoreServers, int numberOfReadReplicas,
 		Duration startupTimeout, String password, int initialHeapSize, int pagecacheSize, String customImageName) {
 		this.neo4jVersion = neo4jVersion;
-		this.numberOfCoreMembers = numberOfCoreMembers;
+		this.numberOfCoreServers = numberOfCoreServers;
 		this.numberOfReadReplicas = numberOfReadReplicas;
 		this.startupTimeout = startupTimeout;
 		this.password = password;
 		this.initialHeapSize = initialHeapSize;
 		this.pagecacheSize = pagecacheSize;
 		this.customImageName = customImageName;
-	}
-
-	/**
-	 * Get the core index and hostname for all configured cores
-	 * @return A stream mapping a core index (integer) -> hostname (String)
-	 */
-	Stream<Map.Entry<Integer, String>> iterateCoreMembers() {
-		final IntFunction<String> generateInstanceName = i -> String.format("neo4j%d", i);
-
-		return IntStream.rangeClosed(1, numberOfCoreMembers)
-			.mapToObj(i -> new AbstractMap.SimpleEntry<>(i - 1, generateInstanceName.apply(i)));
 	}
 
 	String getImageName() {
@@ -85,8 +69,8 @@ final class Configuration implements Serializable {
 		return this.neo4jVersion;
 	}
 
-	public int getNumberOfCoreMembers() {
-		return this.numberOfCoreMembers;
+	public int getNumberOfCoreServers() {
+		return this.numberOfCoreServers;
 	}
 
 	public int getNumberOfReadReplicas() {
@@ -113,65 +97,76 @@ final class Configuration implements Serializable {
 		return this.customImageName;
 	}
 
+	/**
+	 * @return true if this configuration starts a Neo4j 3.5 cluster.
+	 */
+	boolean is35() {
+		return getNeo4jVersion().startsWith("3.5");
+	}
+
+	boolean is41() {
+		return getNeo4jVersion().startsWith("4.1");
+	}
+
 	public Configuration withNeo4jVersion(String newNeo4jVersion) {
 		return this.neo4jVersion == newNeo4jVersion ?
 			this :
-			new Configuration(newNeo4jVersion, this.numberOfCoreMembers, this.numberOfReadReplicas, this.startupTimeout,
+			new Configuration(newNeo4jVersion, this.numberOfCoreServers, this.numberOfReadReplicas, this.startupTimeout,
 				this.password, this.initialHeapSize, this.pagecacheSize, this.customImageName);
 	}
 
-	public Configuration withNumberOfCoreMembers(int newNumberOfCoreMembers) {
-		return this.numberOfCoreMembers == newNumberOfCoreMembers ?
+	public Configuration withNumberOfCoreServers(int newNumberOfCoreServers) {
+		return this.numberOfCoreServers == newNumberOfCoreServers ?
 			this :
-			new Configuration(this.neo4jVersion, newNumberOfCoreMembers, this.numberOfReadReplicas, this.startupTimeout,
+			new Configuration(this.neo4jVersion, newNumberOfCoreServers, this.numberOfReadReplicas, this.startupTimeout,
 				this.password, this.initialHeapSize, this.pagecacheSize, this.customImageName);
 	}
 
 	public Configuration withNumberOfReadReplicas(int newNumberOfReadReplicas) {
 		return this.numberOfReadReplicas == newNumberOfReadReplicas ?
 			this :
-			new Configuration(this.neo4jVersion, this.numberOfCoreMembers, newNumberOfReadReplicas, this.startupTimeout,
+			new Configuration(this.neo4jVersion, this.numberOfCoreServers, newNumberOfReadReplicas, this.startupTimeout,
 				this.password, this.initialHeapSize, this.pagecacheSize, this.customImageName);
 	}
 
 	public Configuration withStartupTimeout(Duration newStartupTimeout) {
 		return this.startupTimeout == newStartupTimeout ?
 			this :
-			new Configuration(this.neo4jVersion, this.numberOfCoreMembers, this.numberOfReadReplicas, newStartupTimeout,
+			new Configuration(this.neo4jVersion, this.numberOfCoreServers, this.numberOfReadReplicas, newStartupTimeout,
 				this.password, this.initialHeapSize, this.pagecacheSize, this.customImageName);
 	}
 
 	public Configuration withPassword(String newPassword) {
 		return this.password == newPassword ?
 			this :
-			new Configuration(this.neo4jVersion, this.numberOfCoreMembers, this.numberOfReadReplicas,
+			new Configuration(this.neo4jVersion, this.numberOfCoreServers, this.numberOfReadReplicas,
 				this.startupTimeout, newPassword, this.initialHeapSize, this.pagecacheSize, this.customImageName);
 	}
 
 	public Configuration withInitialHeapSize(int newInitialHeapSize) {
 		return this.initialHeapSize == newInitialHeapSize ?
 			this :
-			new Configuration(this.neo4jVersion, this.numberOfCoreMembers, this.numberOfReadReplicas,
+			new Configuration(this.neo4jVersion, this.numberOfCoreServers, this.numberOfReadReplicas,
 				this.startupTimeout, this.password, newInitialHeapSize, this.pagecacheSize, this.customImageName);
 	}
 
 	public Configuration withPagecacheSize(int newPagecacheSize) {
 		return this.pagecacheSize == newPagecacheSize ?
 			this :
-			new Configuration(this.neo4jVersion, this.numberOfCoreMembers, this.numberOfReadReplicas,
+			new Configuration(this.neo4jVersion, this.numberOfCoreServers, this.numberOfReadReplicas,
 				this.startupTimeout, this.password, this.initialHeapSize, newPagecacheSize, this.customImageName);
 	}
 
 	public Configuration withCustomImageName(String newCustomImageName) {
 		return this.customImageName == newCustomImageName ?
 			this :
-			new Configuration(this.neo4jVersion, this.numberOfCoreMembers, this.numberOfReadReplicas,
+			new Configuration(this.neo4jVersion, this.numberOfCoreServers, this.numberOfReadReplicas,
 				this.startupTimeout, this.password, this.initialHeapSize, this.pagecacheSize, newCustomImageName);
 	}
 
 	public String toString() {
 		return "Configuration(neo4jVersion=" + this.getNeo4jVersion() + ", numberOfCoreMembers=" + this
-			.getNumberOfCoreMembers() + ", numberOfReadReplicas=" + this.getNumberOfReadReplicas() + ", startupTimeout="
+			.getNumberOfCoreServers() + ", numberOfReadReplicas=" + this.getNumberOfReadReplicas() + ", startupTimeout="
 			+ this.getStartupTimeout() + ", password=" + this.getPassword() + ", initialHeapSize=" + this
 			.getInitialHeapSize() + ", pagecacheSize=" + this.getPagecacheSize() + ", customImageName=" + this
 			.getCustomImageName() + ")";

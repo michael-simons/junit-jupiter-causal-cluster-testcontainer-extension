@@ -38,7 +38,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @Inherited
 @ExtendWith(CausalClusterExtension.class)
 public @interface NeedsCausalCluster {
-	int numberOfCoreMembers() default CausalClusterExtension.DEFAULT_NUMBER_OF_CORE_MEMBERS;
+
+	/**
+	 * @return The number of core servers. A minimum number of 3 is required.
+	 */
+	int numberOfCoreServers() default CausalClusterExtension.DEFAULT_NUMBER_OF_CORE_SERVERS;
+
+	/**
+	 * @return The number of read replicas. A minimum number of 0 is required.
+	 */
+	int numberOfReadReplicas() default CausalClusterExtension.DEFAULT_NUMBER_OF_READ_REPLICAS;
 
 	/**
 	 * @return A valid Neo4j version number.

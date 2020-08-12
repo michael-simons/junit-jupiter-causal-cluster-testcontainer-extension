@@ -48,7 +48,7 @@ class CausalClusterExtension implements BeforeAllCallback {
 		.create(CausalClusterExtension.class);
 
 	static final String DEFAULT_NEO4J_VERSION = "4.0";
-	static final int DEFAULT_NUMBER_OF_CORE_MEMBERS = 3;
+	static final int DEFAULT_NUMBER_OF_CORE_SERVERS = 3;
 	static final int DEFAULT_NUMBER_OF_READ_REPLICAS = 0;
 	static final long DEFAULT_STARTUP_TIMEOUT_IN_MILLIS = 5 * 60 * 1_000;
 	static final String DEFAULT_PASSWORD = "password";
@@ -64,7 +64,7 @@ class CausalClusterExtension implements BeforeAllCallback {
 		List.class, Neo4jCluster.class };
 
 	private static final Configuration DEFAULT_CONFIGURATION = new Configuration(DEFAULT_NEO4J_VERSION,
-		DEFAULT_NUMBER_OF_CORE_MEMBERS,
+		DEFAULT_NUMBER_OF_CORE_SERVERS,
 		DEFAULT_NUMBER_OF_READ_REPLICAS, Duration.ofMillis(DEFAULT_STARTUP_TIMEOUT_IN_MILLIS), DEFAULT_PASSWORD,
 		DEFAULT_HEAP_SIZE_IN_MB, DEFAULT_PAGE_CACHE_IN_MB, null);
 
@@ -76,7 +76,8 @@ class CausalClusterExtension implements BeforeAllCallback {
 
 				final Configuration configuration = DEFAULT_CONFIGURATION
 					.withNeo4jVersion(annotation.neo4jVersion())
-					.withNumberOfCoreMembers(annotation.numberOfCoreMembers())
+					.withNumberOfCoreServers(annotation.numberOfCoreServers())
+					.withNumberOfReadReplicas(annotation.numberOfReadReplicas())
 					.withStartupTimeout(Duration.ofMillis(annotation.startupTimeOutInMillis()))
 					.withPassword(annotation.password())
 					.withCustomImageName(annotation.customImageName());

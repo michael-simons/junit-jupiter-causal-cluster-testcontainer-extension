@@ -19,6 +19,7 @@
 package org.neo4j.junit.jupiter.causal_cluster;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -120,6 +121,19 @@ class NeedsCausalClusterTest {
 					DiscoverySelectors.selectClass(WrongCollectionSubclass1ExtensionPoint.class),
 					DiscoverySelectors.selectClass(WrongCollectionSubclass2ExtensionPoint.class),
 					DiscoverySelectors.selectClass(WrongClusterExtensionPoint.class)
+				)
+				.execute().testEvents();
+
+			assertThat(testEvents.started().stream().collect(Collectors.toList()))
+				.hasSize(0);
+		}
+
+		@Test
+		void shouldCheckNumberOfCoreServers() {
+			Events testEvents = EngineTestKit.engine(ENGINE_ID)
+				.selectors(
+					DiscoverySelectors.selectClass(InvalidNumberOfCoreServers.class),
+					DiscoverySelectors.selectClass(InvalidNumberOfReadReplicas.class)
 				)
 				.execute().testEvents();
 
@@ -478,6 +492,30 @@ class NeedsCausalClusterTest {
 		@Test
 		void aTest() {
 			assertThat(clusterUri).isNotNull();
+		}
+	}
+
+	@NeedsCausalCluster(numberOfCoreServers = 2)
+	static class InvalidNumberOfCoreServers {
+
+		@CausalCluster
+		static String clusterUri;
+
+		@Test
+		void aTest() {
+			fail("Das war wohl nichts.");
+		}
+	}
+
+	@NeedsCausalCluster(numberOfReadReplicas = -1)
+	static class InvalidNumberOfReadReplicas {
+
+		@CausalCluster
+		static String clusterUri;
+
+		@Test
+		void aTest() {
+			fail("Das war wohl nichts.");
 		}
 	}
 
