@@ -23,20 +23,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.neo4j.driver.AuthTokens;
-import org.neo4j.driver.Config;
-import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
-import org.neo4j.driver.Logging;
-import org.neo4j.driver.Session;
-import org.neo4j.driver.Values;
 import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer.Type;
 
 /**
@@ -87,28 +79,14 @@ class CoreAndReadReplicasTest {
 		assertThat(servers).allSatisfy(server -> {
 			switch (server.getType()) {
 				case CORE_SERVER:
-					assertRole(server, "LEADER", "FOLLOWER");
+					assertThat(server.getRolesFor("neo4j")).isSubsetOf("LEADER", "FOLLOWER");
 					break;
 				case REPLICA_SERVER:
-					assertRole(server, "READ_REPLICA");
+					assertThat(server.getRolesFor("neo4j")).isSubsetOf("READ_REPLICA");
 					break;
 				case UNKNOWN:
 					Assertions.fail("Cluster must not contain an unknown server type");
 			}
 		});
-	}
-
-	static void assertRole(Neo4jServer server, String... expectedRoles) {
-
-		try (Driver driver = GraphDatabase
-			.driver(server.getDirectBoltUri(), AuthTokens.basic("neo4j", "password"), Config.builder().withLogging(
-				Logging.console(Level.OFF)).build());
-			Session session = driver.session()) {
-			String role = session.readTransaction(tx -> tx.run("CALL dbms.cluster.role($databaseName)",
-				Values.parameters("databaseName", "neo4j")).single().get(0).asString());
-
-			assertThat(expectedRoles).describedAs("Server of type " + server.getType() + " had role " + role)
-				.contains(role);
-		}
 	}
 }

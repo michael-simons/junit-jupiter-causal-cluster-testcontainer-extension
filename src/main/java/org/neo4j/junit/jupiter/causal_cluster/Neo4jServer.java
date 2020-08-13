@@ -19,6 +19,7 @@
 package org.neo4j.junit.jupiter.causal_cluster;
 
 import java.net.URI;
+import java.util.List;
 
 /**
  * This is a Neo4j instance that is a part of causal cluster, with {@literal Neo4jServer} being used equally for Core and
@@ -78,4 +79,10 @@ public interface Neo4jServer {
 	 * @return The type of this server.
 	 */
 	Type getType();
+
+	/**
+	 * @param database The database for which the roles should be retrieved.
+	 * @return The roles that this server has for the database in question.
+	 */
+	List<String> getRolesFor(String database);
 }
