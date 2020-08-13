@@ -99,7 +99,7 @@ class AllAnnotationsAppliedTest {
 		for (Neo4jServer server : allServers) {
 
 			DefaultNeo4jServer newServer = new DefaultNeo4jServer(
-				(Neo4jContainer<?>) field.get(server), new URI(server.getURI().toString()), Type.UNKNOWN);
+				(Neo4jContainer<?>) field.get(server), new URI(server.getURI().toString()), server.getType());
 
 			assertThat(newServer.hashCode()).isEqualTo(server.hashCode());
 			assertThat(newServer).isEqualTo(server);

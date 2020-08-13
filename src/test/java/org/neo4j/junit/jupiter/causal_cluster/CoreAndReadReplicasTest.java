@@ -20,15 +20,25 @@ package org.neo4j.junit.jupiter.causal_cluster;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Config;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Logging;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.Value;
+import org.neo4j.driver.Values;
+import org.neo4j.driver.internal.util.ServerVersion;
 import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer.Type;
 
 /**
@@ -36,6 +46,21 @@ import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer.Type;
  * @soundtrack Juse Ju - Millennium
  */
 class CoreAndReadReplicasTest {
+
+	@Nested @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+	@NeedsCausalCluster(numberOfReadReplicas = 2, neo4jVersion = "3.5")
+	class With35 {
+
+		@CausalCluster
+		Neo4jCluster cluster;
+
+		@Test
+		void shouldProvideCoreAndReadReplicas() {
+
+			Set<Neo4jServer> servers = cluster.getAllServers();
+			assertCorrectNumberOfCoreAndReadReplicaServers(servers);
+		}
+	}
 
 	@Nested @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 	@NeedsCausalCluster(numberOfReadReplicas = 2)
@@ -79,14 +104,32 @@ class CoreAndReadReplicasTest {
 		assertThat(servers).allSatisfy(server -> {
 			switch (server.getType()) {
 				case CORE_SERVER:
-					assertThat(server.getRolesFor("neo4j")).isSubsetOf("LEADER", "FOLLOWER");
+					assertRole(server, "LEADER", "FOLLOWER");
 					break;
 				case REPLICA_SERVER:
-					assertThat(server.getRolesFor("neo4j")).isSubsetOf("READ_REPLICA");
+					assertRole(server, "READ_REPLICA");
 					break;
-				case UNKNOWN:
-					Assertions.fail("Cluster must not contain an unknown server type");
 			}
 		});
+	}
+
+	static void assertRole(Neo4jServer server, String... expectedRoles) {
+
+		try (Driver driver = GraphDatabase
+			.driver(server.getDirectBoltUri(), AuthTokens.basic("neo4j", "password"), Config.builder().withLogging(
+				Logging.console(Level.OFF)).build());
+			Session session = driver.session()
+		) {
+			List<String> roles;
+			if (ServerVersion.version(driver).lessThanOrEqual(ServerVersion.v4_0_0)) {
+				roles = Collections.singletonList(
+					session.readTransaction(tx -> tx.run("CALL dbms.cluster.role()").single().get(0).asString()));
+			} else {
+				roles = session.readTransaction(tx -> tx.run("CALL dbms.cluster.role($databaseName)",
+					Values.parameters("databaseName", "neo4j")).single().get(0).asList(Value::asString));
+			}
+
+			assertThat(roles).isSubsetOf(expectedRoles);
+		}
 	}
 }

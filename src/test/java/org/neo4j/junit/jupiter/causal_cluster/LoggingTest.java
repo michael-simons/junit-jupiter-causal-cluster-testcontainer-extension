@@ -30,6 +30,7 @@ import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
+import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer.Type;
 import org.testcontainers.containers.Neo4jContainer;
 
 /**
@@ -52,7 +53,7 @@ class LoggingTest {
 	@Test
 	void getDebugLogShouldWork() {
 
-		Neo4jServer server = new DefaultNeo4jServer(container, URI.create(container.getBoltUrl()), Neo4jServer.Type.UNKNOWN);
+		Neo4jServer server = new DefaultNeo4jServer(container, URI.create(container.getBoltUrl()), Type.CORE_SERVER);
 		String debugLogs = server.getDebugLog();
 		assertThat(debugLogs).doesNotContain("OCI runtime exec failed");
 	}
@@ -63,7 +64,7 @@ class LoggingTest {
 		String query = "MATCH (n) RETURN COUNT(n) as theNodeCount";
 
 		Neo4jServer server = new DefaultNeo4jServer(container, URI.create(container.getBoltUrl()),
-			Neo4jServer.Type.UNKNOWN);
+			Type.CORE_SERVER);
 		try (Driver driver = GraphDatabase.driver(server.getDirectBoltUri(), AuthTokens.none());
 			Session session = driver.session()) {
 			long nodeCount = session.readTransaction(tx -> tx.run(query).single().get(0).asLong());
