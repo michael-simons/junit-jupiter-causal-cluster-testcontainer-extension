@@ -46,11 +46,11 @@ import org.testcontainers.containers.Neo4jContainer;
  */
 final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 
-	private final static ScriptEngine scriptEngine;
+	private final static ScriptEngine SCRIPT_ENGINE;
 
 	static {
 		ScriptEngineManager sem = new ScriptEngineManager();
-		scriptEngine = sem.getEngineByName("javascript");
+		SCRIPT_ENGINE = sem.getEngineByName("javascript");
 	}
 
 	private enum LogFile {
@@ -229,10 +229,10 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 			+ "} else {\n"
 			+ "    response.results[0].data[0].row.join(\",\");\n"
 			+ "}";
-		Bindings parameter = scriptEngine.createBindings();
+		Bindings parameter = SCRIPT_ENGINE.createBindings();
 		parameter.put("response", response);
 		try {
-			return (String) scriptEngine.eval(scriptTemplate, parameter);
+			return (String) SCRIPT_ENGINE.eval(scriptTemplate, parameter);
 		} catch (ScriptException e) {
 			throw new RuntimeException(e);
 		}
