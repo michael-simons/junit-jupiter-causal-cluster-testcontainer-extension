@@ -23,8 +23,11 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer.Type;
 
 /**
  * This allows us to interact with a Neo4j Causal Cluster.
@@ -35,15 +38,23 @@ import java.util.stream.Stream;
 public interface Neo4jCluster {
 
 	/**
+	 * This method is guaranteed to return the URI of a core server and never a replica.
+	 *
 	 * @return An URI into this cluster.
 	 */
-	URI getURI();
+	default URI getURI() {
+
+		Collection<URI> allCoreUris = getURIs();
+		int n = ThreadLocalRandom.current().nextInt(allCoreUris.size());
+		return allCoreUris.stream().skip(n).findFirst().get();
+	}
 
 	/**
-	 * @return All URIs into this cluster.
+	 * @return All URIs into this cluster (only core servers included)
 	 */
 	default Collection<URI> getURIs() {
-		return getAllServers().stream().map(Neo4jServer::getURI).collect(Collectors.toList());
+		return getAllServers().stream().filter(s -> s.getType() == Type.CORE_SERVER).map(Neo4jServer::getURI)
+			.collect(Collectors.toList());
 	}
 
 	/**

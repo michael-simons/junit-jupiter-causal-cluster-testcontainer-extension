@@ -18,7 +18,6 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -75,14 +74,6 @@ final class DefaultCluster implements Neo4jCluster, CloseableResource {
 		this.clusterServers = new ArrayList<>(clusterServers.size() + readReplicaServers.size());
 		this.clusterServers.addAll(clusterServers);
 		this.clusterServers.addAll(readReplicaServers);
-	}
-
-	@Override
-	public URI getURI() {
-
-		// Choose a random bolt port from the available ports
-		DefaultNeo4jServer server = clusterServers.get(ThreadLocalRandom.current().nextInt(0, clusterServers.size()));
-		return server.getURI();
 	}
 
 	@Override
