@@ -55,12 +55,12 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 	/**
 	 * The type of this server.
 	 */
-	private final Role role;
+	private final Type type;
 
-	DefaultNeo4jServer(Neo4jContainer<?> container, URI externalURI, Role role) {
+	DefaultNeo4jServer(Neo4jContainer<?> container, URI externalURI, Type type) {
 		this.container = container;
 		this.externalURI = externalURI;
-		this.role = role;
+		this.type = type;
 	}
 
 	@Override
@@ -136,8 +136,8 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 	}
 
 	@Override
-	public Role getRole() {
-		return role;
+	public Type getType() {
+		return type;
 	}
 
 	Neo4jContainer<?> unwrap() {
@@ -149,7 +149,7 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 		return "DefaultNeo4jServer{" +
 			"container=" + container.getContainerId() +
 			", externalURI=" + externalURI +
-			", type=" + role +
+			", type=" + type +
 			'}';
 	}
 }

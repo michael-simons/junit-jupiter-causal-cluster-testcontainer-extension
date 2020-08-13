@@ -37,7 +37,7 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Logging;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Values;
-import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer.Role;
+import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer.Type;
 
 /**
  * @author Michael J. Simons
@@ -76,16 +76,16 @@ class CoreAndReadReplicasTest {
 	}
 
 	static void assertCorrectNumberOfCoreAndReadReplicaServers(Set<Neo4jServer> servers) {
-		assertThat(servers.stream().map(Neo4jServer::getRole).distinct())
-			.containsExactlyInAnyOrder(Role.CORE_SERVER, Role.REPLICA_SERVER);
+		assertThat(servers.stream().map(Neo4jServer::getType).distinct())
+			.containsExactlyInAnyOrder(Neo4jServer.Type.CORE_SERVER, Neo4jServer.Type.REPLICA_SERVER);
 
-		Map<Role, List<Neo4jServer>> serversByType = servers.stream()
-			.collect(Collectors.groupingBy(Neo4jServer::getRole));
-		assertThat(serversByType.get(Role.CORE_SERVER)).hasSize(3);
-		assertThat(serversByType.get(Role.REPLICA_SERVER)).hasSize(2);
+		Map<Neo4jServer.Type, List<Neo4jServer>> serversByType = servers.stream()
+			.collect(Collectors.groupingBy(Neo4jServer::getType));
+		assertThat(serversByType.get(Neo4jServer.Type.CORE_SERVER)).hasSize(3);
+		assertThat(serversByType.get(Type.REPLICA_SERVER)).hasSize(2);
 
 		assertThat(servers).allSatisfy(server -> {
-			switch (server.getRole()) {
+			switch (server.getType()) {
 				case CORE_SERVER:
 					assertRole(server, "LEADER", "FOLLOWER");
 					break;
@@ -107,7 +107,7 @@ class CoreAndReadReplicasTest {
 			String role = session.readTransaction(tx -> tx.run("CALL dbms.cluster.role($databaseName)",
 				Values.parameters("databaseName", "neo4j")).single().get(0).asString());
 
-			assertThat(expectedRoles).describedAs("Server of type " + server.getRole() + " had role " + role)
+			assertThat(expectedRoles).describedAs("Server of type " + server.getType() + " had role " + role)
 				.contains(role);
 		}
 	}

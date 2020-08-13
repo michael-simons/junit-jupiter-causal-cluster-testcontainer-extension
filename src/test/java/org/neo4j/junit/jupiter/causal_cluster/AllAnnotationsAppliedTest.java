@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.platform.commons.util.ReflectionUtils;
-import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer.Role;
+import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer.Type;
 import org.testcontainers.containers.Neo4jContainer;
 
 @NeedsCausalCluster
@@ -99,7 +99,7 @@ class AllAnnotationsAppliedTest {
 		for (Neo4jServer server : allServers) {
 
 			DefaultNeo4jServer newServer = new DefaultNeo4jServer(
-				(Neo4jContainer<?>) field.get(server), new URI(server.getURI().toString()), Role.UNKNOWN);
+				(Neo4jContainer<?>) field.get(server), new URI(server.getURI().toString()), Type.UNKNOWN);
 
 			assertThat(newServer.hashCode()).isEqualTo(server.hashCode());
 			assertThat(newServer).isEqualTo(server);

@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer.Role;
+import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer.Type;
 import org.testcontainers.containers.Neo4jContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.SocatContainer;
@@ -140,7 +140,7 @@ final class ClusterFactory {
 		return (portAndAlias) -> {
 			Neo4jContainer<?> container = configureContainerForCoreServer(portAndAlias, network,
 				initialDiscoveryMembers);
-			return new DefaultNeo4jServer(container, getNeo4jUri(portAndAlias.getKey()), Role.CORE_SERVER);
+			return new DefaultNeo4jServer(container, getNeo4jUri(portAndAlias.getKey()), Type.CORE_SERVER);
 		};
 	}
 
@@ -151,7 +151,7 @@ final class ClusterFactory {
 		return (portAndAlias) -> {
 			Neo4jContainer<?> container = configureContainerForReplicaServerOn(portAndAlias, network,
 				initialDiscoveryMembers);
-			return new DefaultNeo4jServer(container, getNeo4jUri(portAndAlias.getKey()), Role.REPLICA_SERVER);
+			return new DefaultNeo4jServer(container, getNeo4jUri(portAndAlias.getKey()), Neo4jServer.Type.REPLICA_SERVER);
 		};
 	}
 

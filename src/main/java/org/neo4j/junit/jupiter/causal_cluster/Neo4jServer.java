@@ -33,7 +33,7 @@ public interface Neo4jServer {
 	/**
 	 * Server can either be a core or replica server.
 	 */
-	enum Role {
+	enum Type {
 		CORE_SERVER,
 		REPLICA_SERVER,
 		UNKNOWN
@@ -77,5 +77,5 @@ public interface Neo4jServer {
 	/**
 	 * @return The type of this server.
 	 */
-	Role getRole();
+	Type getType();
 }
