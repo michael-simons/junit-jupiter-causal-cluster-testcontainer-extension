@@ -48,7 +48,7 @@ import org.testcontainers.containers.wait.strategy.WaitStrategy;
  * @author Michael J. Simons
  * @author Andrew Jefferson
  */
-final class DefaultCluster implements Neo4jCluster, CloseableResource {
+final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 
 	private final static String NEO4J_CONTAINER_START_MESSAGE = "======== Neo4j";
 	private final static String NEO4J_BOLT_UP_MESSAGE = "Bolt enabled on";
@@ -60,12 +60,12 @@ final class DefaultCluster implements Neo4jCluster, CloseableResource {
 	private final SocatContainer boltProxy;
 	private final List<DefaultNeo4jServer> clusterServers;
 
-	DefaultCluster(SocatContainer boltProxy, List<DefaultNeo4jServer> clusterServers) {
+	DefaultNeo4jCluster(SocatContainer boltProxy, List<DefaultNeo4jServer> clusterServers) {
 
 		this(boltProxy, clusterServers, Collections.emptyList());
 	}
 
-	DefaultCluster(
+	DefaultNeo4jCluster(
 		SocatContainer boltProxy, List<DefaultNeo4jServer> clusterServers,
 		List<DefaultNeo4jServer> readReplicaServers
 	) {
