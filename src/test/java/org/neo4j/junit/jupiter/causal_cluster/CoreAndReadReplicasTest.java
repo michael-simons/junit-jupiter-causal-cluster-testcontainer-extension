@@ -36,7 +36,7 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Logging;
 import org.neo4j.driver.Session;
-import org.neo4j.driver.Value;
+import org.neo4j.driver.TransactionWork;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.internal.util.ServerVersion;
 import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer.Type;
@@ -120,16 +120,16 @@ class CoreAndReadReplicasTest {
 				Logging.console(Level.OFF)).build());
 			Session session = driver.session()
 		) {
-			List<String> roles;
-			if (ServerVersion.version(driver).lessThanOrEqual(ServerVersion.v4_0_0)) {
-				roles = Collections.singletonList(
-					session.readTransaction(tx -> tx.run("CALL dbms.cluster.role()").single().get(0).asString()));
+			TransactionWork<String> callClusterRole;
+			if (ServerVersion.version(driver).lessThan(ServerVersion.v4_0_0)) {
+				callClusterRole = tx -> tx.run("CALL dbms.cluster.role()").single().get(0).asString();
 			} else {
-				roles = session.readTransaction(tx -> tx.run("CALL dbms.cluster.role($databaseName)",
-					Values.parameters("databaseName", "neo4j")).single().get(0).asList(Value::asString));
+				callClusterRole = tx -> tx
+					.run("CALL dbms.cluster.role($databaseName)", Values.parameters("databaseName", "neo4j")).single()
+					.get(0).asString();
 			}
-
-			assertThat(roles).isSubsetOf(expectedRoles);
+			String role = session.readTransaction(callClusterRole);
+			assertThat(Collections.singleton(role)).isSubsetOf(expectedRoles);
 		}
 	}
 }
