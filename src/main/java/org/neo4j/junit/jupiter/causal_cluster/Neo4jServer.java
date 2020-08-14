@@ -31,6 +31,14 @@ import java.net.URI;
 public interface Neo4jServer {
 
 	/**
+	 * Server can either be a core or replica server.
+	 */
+	enum Type {
+		CORE_SERVER,
+		REPLICA_SERVER
+	}
+
+	/**
 	 * @return The complete Neo4j debug log.
 	 */
 	String getDebugLog();
@@ -55,10 +63,18 @@ public interface Neo4jServer {
 	 */
 	URI getURI();
 
+	/**
+	 * @return The URI into this server but using the {@code bolt} instead of the {@code neo4j} protocol.
+	 */
 	URI getDirectBoltUri();
 
 	/**
 	 * @return True if the underlying container is running.
 	 */
 	boolean isContainerRunning();
+
+	/**
+	 * @return The type of this server.
+	 */
+	Type getType();
 }

@@ -87,7 +87,7 @@ class AllAnnotationsAppliedTest {
 	void serverComparisonTest() throws URISyntaxException, IllegalAccessException {
 		// Get the container. 🤠
 		Field field = ReflectionUtils
-			.findFields(DefaultNeo4jServer.class, f -> "container".equals(f.getName()),
+			.findFields(DefaultNeo4jServer.class, f -> "container" .equals(f.getName()),
 				ReflectionUtils.HierarchyTraversalMode.TOP_DOWN).get(0);
 		field.setAccessible(true);
 
@@ -98,7 +98,7 @@ class AllAnnotationsAppliedTest {
 		for (Neo4jServer server : allServers) {
 
 			DefaultNeo4jServer newServer = new DefaultNeo4jServer(
-				(Neo4jContainer<?>) field.get(server), new URI(server.getURI().toString()));
+				(Neo4jContainer<?>) field.get(server), new URI(server.getURI().toString()), server.getType());
 
 			assertThat(newServer.hashCode()).isEqualTo(server.hashCode());
 			assertThat(newServer).isEqualTo(server);
@@ -110,6 +110,7 @@ class AllAnnotationsAppliedTest {
 
 	@Test
 	void typesTest() {
+
 		// Runtime annotation processing & reflection has the potential to let you assign any class to a field
 		// (particularly with generics). So here we explicitly check the types at runtime
 

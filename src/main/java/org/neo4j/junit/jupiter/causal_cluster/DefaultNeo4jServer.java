@@ -21,6 +21,8 @@ package org.neo4j.junit.jupiter.causal_cluster;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Objects;
 
 import org.testcontainers.containers.Neo4jContainer;
@@ -52,10 +54,23 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 	 * The external URI under which this server is reachable, not to be confused with the internal URI returned by {@link Neo4jContainer#getBoltUrl()}.
 	 */
 	private final URI externalURI;
+	/**
+	 * The type of this server.
+	 */
+	private final Type type;
+	/**
+	 * Basic auth token against the container.
+	 */
+	private final String authToken;
 
-	DefaultNeo4jServer(Neo4jContainer<?> container, URI externalURI) {
+	DefaultNeo4jServer(Neo4jContainer<?> container, URI externalURI, Type type) {
 		this.container = container;
 		this.externalURI = externalURI;
+		this.type = type;
+
+		byte[] encodedAuth = Base64.getEncoder()
+			.encode(("neo4j:" + container.getAdminPassword()).getBytes(StandardCharsets.UTF_8));
+		this.authToken = "Basic " + new String(encodedAuth);
 	}
 
 	@Override
@@ -130,7 +145,21 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 		return container.isRunning();
 	}
 
+	@Override
+	public Type getType() {
+		return type;
+	}
+
 	Neo4jContainer<?> unwrap() {
 		return container;
+	}
+
+	@Override
+	public String toString() {
+		return "DefaultNeo4jServer{" +
+			"container=" + container.getContainerId() +
+			", externalURI=" + externalURI +
+			", type=" + type +
+			'}';
 	}
 }

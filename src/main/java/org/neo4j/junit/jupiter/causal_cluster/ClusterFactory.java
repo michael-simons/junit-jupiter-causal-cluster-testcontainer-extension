@@ -19,12 +19,18 @@
 package org.neo4j.junit.jupiter.causal_cluster;
 
 import java.net.URI;
+import java.util.AbstractMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Function;
+import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
+import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer.Type;
 import org.testcontainers.containers.Neo4jContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.SocatContainer;
@@ -38,6 +44,8 @@ import org.testcontainers.containers.SocatContainer;
 final class ClusterFactory {
 
 	private static final int DEFAULT_BOLT_PORT = 7687;
+	public static final int MINIMUM_NUMBER_OF_CORE_SERVERS_REQUIRED = 3;
+	public static final int MINIMUM_NUMBER_OF_REPLICA_SERVERS_REQUIRED = 0;
 
 	private final Configuration configuration;
 
@@ -49,58 +57,56 @@ final class ClusterFactory {
 
 	Neo4jCluster createCluster() {
 
-		final int numberOfCoreMembers = configuration.getNumberOfCoreMembers();
+		final int numberOfCoreServers = configuration.getNumberOfCoreServers();
+		final int numberOfReplicaServers = configuration.getNumberOfReadReplicas();
+
+		// Have some sanity check on the number of servers
+		if (numberOfCoreServers < MINIMUM_NUMBER_OF_CORE_SERVERS_REQUIRED) {
+			throw new IllegalArgumentException("A cluster needs at least 3 core servers.");
+		}
+
+		if (numberOfReplicaServers < MINIMUM_NUMBER_OF_REPLICA_SERVERS_REQUIRED) {
+			throw new IllegalArgumentException("A cluster cannot have a negative number of read replicas.");
+		}
 
 		// Prepare one shared network for those containers
-		final Network network = Network.newNetwork();
+		final Network onNetwork = Network.newNetwork();
 
 		// Setup a naming strategy and the initial discovery members
-		final String initialDiscoveryMembers = configuration.iterateCoreMembers()
+		final String withInitialDiscoveryMembers = iterateCoreServers()
 			.map(n -> String.format("%s:5000", n.getValue()))
 			.collect(Collectors.joining(","));
 
 		// Prepare proxy to enter the cluster
-		boltProxy = new SocatContainer().withNetwork(network);
-		configuration.iterateCoreMembers()
-			.forEach(
-				member -> boltProxy
-					.withTarget(DEFAULT_BOLT_PORT + member.getKey(), member.getValue(), DEFAULT_BOLT_PORT));
+		boltProxy = new SocatContainer().withNetwork(onNetwork);
+		iterateCoreServers().forEach(member -> boltProxy
+			.withTarget(member.getKey(), member.getValue(), DEFAULT_BOLT_PORT));
+		iterateReplicaServers().forEach(member -> boltProxy
+			.withTarget(member.getKey(), member.getValue(), DEFAULT_BOLT_PORT));
 
 		// Start the proxy so that the exposed ports are available and we can get the mapped ones
 		boltProxy.start();
 
-		final boolean is35 = configuration.getNeo4jVersion().startsWith("3.5");
-		// Build the cluster
-		final List<Neo4jContainer<?>> cluster = configuration.iterateCoreMembers()
-			.map(member -> new Neo4jContainer<>(configuration.getImageName())
-				.withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
-				.withAdminPassword(configuration.getPassword())
-				.withNetwork(network)
-				.withNetworkAliases(member.getValue())
-				.withCreateContainerCmdModifier(cmd -> cmd.withHostName(member.getValue()))
-				.withNeo4jConfig("dbms.mode", "CORE")
-				.withNeo4jConfig("dbms.memory.pagecache.size", configuration.getPagecacheSize() + "M")
-				.withNeo4jConfig("dbms.memory.heap.initial_size", configuration.getInitialHeapSize() + "M")
-				.withNeo4jConfig(is35 ? "dbms.connectors.default_listen_address" : "dbms.default_listen_address",
-					"0.0.0.0")
-				.withNeo4jConfig(
-					is35 ? "dbms.connectors.default_advertised_address" : "dbms.default_advertised_address",
-					member.getValue())
-				.withNeo4jConfig("dbms.connector.bolt.advertised_address", String
-					.format("%s:%d", boltProxy.getContainerIpAddress(),
-						boltProxy.getMappedPort(DEFAULT_BOLT_PORT + member.getKey())))
-				.withNeo4jConfig("causal_clustering.initial_discovery_members", initialDiscoveryMembers)
-				.withNeo4jConfig("causal_clustering.minimum_core_cluster_size_at_formation",
-					Integer.toString(numberOfCoreMembers))
-				.withNeo4jConfig("causal_clustering.minimum_core_cluster_size_at_runtime",
-					Integer.toString(numberOfCoreMembers))
-				.withStartupTimeout(configuration.getStartupTimeout()))
+		// First configure the core server container
+		final List<DefaultNeo4jServer> coreServers = iterateCoreServers()
+			.map(createCoreServer(onNetwork, withInitialDiscoveryMembers))
 			.collect(Collectors.toList());
+		startInParallel(coreServers);
 
-		// Start all of them in parallel
-		final CountDownLatch latch = new CountDownLatch(numberOfCoreMembers);
-		cluster.forEach(instance -> CompletableFuture.runAsync(() -> {
-			instance.start();
+		// Then the replicas configure the core server container
+		final List<DefaultNeo4jServer> readReplicaServers = iterateReplicaServers()
+			.map(createReadReplica(onNetwork, withInitialDiscoveryMembers))
+			.collect(Collectors.toList());
+		startInParallel(readReplicaServers);
+
+		return new DefaultCluster(boltProxy, coreServers, readReplicaServers);
+	}
+
+	private void startInParallel(List<DefaultNeo4jServer> servers) {
+
+		final CountDownLatch latch = new CountDownLatch(servers.size());
+		servers.forEach(instance -> CompletableFuture.runAsync(() -> {
+			instance.unwrap().start();
 			latch.countDown();
 		}));
 
@@ -109,12 +115,103 @@ final class ClusterFactory {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+	}
 
-		List<DefaultNeo4jServer> neo4jCores = IntStream.range(0, cluster.size())
-			.mapToObj(idx -> new DefaultNeo4jServer(cluster.get(idx), getNeo4jUri(DEFAULT_BOLT_PORT + idx)))
-			.collect(Collectors.toList());
+	private Stream<Map.Entry<Integer, String>> iterateCoreServers() {
+		final IntFunction<String> generateInstanceName = i -> String.format("neo4j%d", i);
 
-		return new DefaultCluster(boltProxy, neo4jCores);
+		return IntStream.rangeClosed(1, this.configuration.getNumberOfCoreServers())
+			.mapToObj(i -> new AbstractMap.SimpleEntry<>(DEFAULT_BOLT_PORT + i - 1, generateInstanceName.apply(i)));
+	}
+
+	private Stream<Map.Entry<Integer, String>> iterateReplicaServers() {
+		final IntFunction<String> generateInstanceName = i -> String.format("replica%d", i);
+
+		return IntStream.rangeClosed(1, this.configuration.getNumberOfReadReplicas())
+			.mapToObj(
+				i -> new AbstractMap.SimpleEntry<>(DEFAULT_BOLT_PORT + configuration.getNumberOfCoreServers() + i - 1,
+					generateInstanceName.apply(i)));
+	}
+
+	private Function<Map.Entry<Integer, String>, DefaultNeo4jServer> createCoreServer(
+		final Network network,
+		final String initialDiscoveryMembers) {
+
+		return (portAndAlias) -> {
+			Neo4jContainer<?> container = configureContainerForCoreServer(portAndAlias, network,
+				initialDiscoveryMembers);
+			return new DefaultNeo4jServer(container, getNeo4jUri(portAndAlias.getKey()), Type.CORE_SERVER);
+		};
+	}
+
+	private Function<Map.Entry<Integer, String>, DefaultNeo4jServer> createReadReplica(
+		final Network network,
+		final String initialDiscoveryMembers) {
+
+		return (portAndAlias) -> {
+			Neo4jContainer<?> container = configureContainerForReplicaServerOn(portAndAlias, network,
+				initialDiscoveryMembers);
+			return new DefaultNeo4jServer(container, getNeo4jUri(portAndAlias.getKey()), Neo4jServer.Type.REPLICA_SERVER);
+		};
+	}
+
+	private Neo4jContainer<?> configureContainerForCoreServer(
+		final Map.Entry<Integer, String> portAndAlias,
+		final Network network,
+		final String initialDiscoveryMembers
+	) {
+
+		String numberOfCoreServers = Integer.toString(configuration.getNumberOfCoreServers());
+
+		return newContainerWithCommonConfig(portAndAlias, network)
+			.withNeo4jConfig("dbms.mode", "CORE")
+			.withNeo4jConfig("causal_clustering.initial_discovery_members", initialDiscoveryMembers)
+			.withNeo4jConfig("causal_clustering.minimum_core_cluster_size_at_formation", numberOfCoreServers)
+			.withNeo4jConfig("causal_clustering.minimum_core_cluster_size_at_runtime", numberOfCoreServers)
+			.withStartupTimeout(configuration.getStartupTimeout());
+	}
+
+	private Neo4jContainer<?> configureContainerForReplicaServerOn(
+		Map.Entry<Integer, String> portAndAlias,
+		final Network network,
+		final String initialDiscoveryMembers
+	) {
+		Neo4jContainer<?> readReplicaContainer = newContainerWithCommonConfig(portAndAlias, network)
+			.withNeo4jConfig("dbms.mode", "READ_REPLICA")
+			.withNeo4jConfig("causal_clustering.initial_discovery_members", initialDiscoveryMembers)
+			.withStartupTimeout(configuration.getStartupTimeout());
+
+		// See https://neo4j.com/docs/operations-manual/4.1/clustering/deploy/#causal-clustering-add-read-replica
+		// But I assume a bug in the docs, needs to be confirmed though.
+		if (configuration.is41()) {
+			readReplicaContainer = readReplicaContainer
+				.withNeo4jConfig("causal_clustering.discovery_members", initialDiscoveryMembers);
+		}
+		return readReplicaContainer;
+	}
+
+	private Neo4jContainer<?> newContainerWithCommonConfig(Map.Entry<Integer, String> portAndAlias, Network network) {
+
+		boolean is35 = configuration.is35();
+		String alias = portAndAlias.getValue();
+
+		String advertisedAddress = String.format("%s:%d",
+			boltProxy.getContainerIpAddress(),
+			boltProxy.getMappedPort(portAndAlias.getKey())
+		);
+
+		return new Neo4jContainer<>(configuration.getImageName())
+			.withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
+			.withAdminPassword(configuration.getPassword())
+			.withNetwork(network)
+			.withNetworkAliases(alias)
+			.withCreateContainerCmdModifier(cmd -> cmd.withHostName(alias))
+			.withNeo4jConfig("dbms.memory.pagecache.size", configuration.getPagecacheSize() + "M")
+			.withNeo4jConfig("dbms.memory.heap.initial_size", configuration.getInitialHeapSize() + "M")
+			.withNeo4jConfig(is35 ? "dbms.connectors.default_listen_address" : "dbms.default_listen_address", "0.0.0.0")
+			.withNeo4jConfig(is35 ? "dbms.connectors.default_advertised_address" : "dbms.default_advertised_address",
+				alias)
+			.withNeo4jConfig("dbms.connector.bolt.advertised_address", advertisedAddress);
 	}
 
 	private URI getNeo4jUri(int boltPort) {
