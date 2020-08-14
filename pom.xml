@@ -4,7 +4,7 @@
 
 	<groupId>eu.michael-simons.neo4j</groupId>
 	<artifactId>junit-jupiter-causal-cluster-testcontainer-extension</artifactId>
-	<version>4.0.2.3-SNAPSHOT</version>
+	<version>2020.0.0-SNAPSHOT</version>
 
 	<name>JUnit Jupiter Causal-Cluster-Testcontainer Extension</name>
 	<description>Provides a JUnit Jupiter extension that creates Neo4j causal clusters on demand.</description>
