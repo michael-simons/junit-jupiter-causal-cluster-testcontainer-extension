@@ -45,7 +45,7 @@
 	</scm>
 
 	<properties>
-		<assertj.version>3.16.1</assertj.version>
+		<assertj.version>3.17.1</assertj.version>
 
 		<checkstyle.version>8.35</checkstyle.version>
 		<java.version>1.8</java.version>
