@@ -168,6 +168,31 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 	}
 
 	@Override
+	public Set<Neo4jServer> pauseRandomServers(int n) {
+		return pauseRandomServersExcept(n, Collections.emptySet());
+	}
+
+	@Override
+	public Set<Neo4jServer> pauseRandomServersExcept(int n, Set<Neo4jServer> exclusions) {
+		List<Neo4jServer> chosenServers = chooseRandomServers(n, exclusions);
+
+		return doWithServers(chosenServers, server -> {
+			Neo4jContainer<?> container = unwrap(server);
+			container.getDockerClient().pauseContainerCmd(container.getContainerId()).exec();
+			return server;
+		}).collect(Collectors.toSet());
+	}
+
+	@Override
+	public Set<Neo4jServer> unpauseServers(Set<Neo4jServer> servers) {
+		return doWithServers(servers, server -> {
+			Neo4jContainer<?> container = unwrap(server);
+			container.getDockerClient().unpauseContainerCmd(container.getContainerId()).exec();
+			return server;
+		}).collect(Collectors.toSet());
+	}
+
+	@Override
 	public void waitForLogMessageOnAll(Set<Neo4jServer> servers, String message, Duration timeout) throws
 		Neo4jTimeoutException {
 
