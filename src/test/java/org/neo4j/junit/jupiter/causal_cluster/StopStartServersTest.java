@@ -18,14 +18,6 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +25,17 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.commons.logging.Logger;
 import org.junit.platform.commons.logging.LoggerFactory;
+
+import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
 import org.neo4j.driver.exceptions.Neo4jException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,12 +43,16 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @NeedsCausalCluster()
-class StopStartServersTest extends ClusterActionsTest {
+class StopStartServersTest {
 
 	private final static String NEO4J_UP_MESSAGE = "Remote interface available at";
 	private final static String NEO4J_STOPPED_GRACEFULLY_MESSAGE = "Stopped.";
-
 	private final Logger log = LoggerFactory.getLogger(this.getClass());
+
+	@CausalCluster
+	static Collection<URI> clusterUris;
+	@CausalCluster
+	static Neo4jCluster cluster;
 
 	@BeforeEach
 	void before() throws Neo4jCluster.Neo4jTimeoutException {
@@ -57,7 +64,7 @@ class StopStartServersTest extends ClusterActionsTest {
 	void after() throws Neo4jCluster.Neo4jTimeoutException {
 		// make sure that nothing is broken before the cluster is handed over to the next test
 		cluster.waitForBoltOnAll(cluster.getAllServers(), Duration.ofSeconds(10));
-		verifyAllServersConnectivity();
+		DriverUtils.verifyAllServersConnectivity(cluster);
 	}
 
 	@ParameterizedTest()
@@ -69,7 +76,7 @@ class StopStartServersTest extends ClusterActionsTest {
 
 		// then
 		assertThat(stopped).hasSize(1).first().satisfies(logsSinceStartContainingStoppedMessage());
-		verifyAllServersConnectivity(cluster.getAllServersExcept(stopped));
+		DriverUtils.verifyAllServersConnectivity(cluster.getAllServersExcept(stopped));
 
 		Duration timeRemaining = Duration.between(Instant.now(), deadline);
 		if (!timeRemaining.isNegative()) {
@@ -99,14 +106,15 @@ class StopStartServersTest extends ClusterActionsTest {
 
 		// then
 		assertThat(stoppedServers).allSatisfy(logsSinceStartContainingStoppedMessage());
-		assertThatThrownBy(this::verifyAnyServerNeo4jConnectivity).isInstanceOf(Neo4jException.class);
+		assertThatThrownBy(() -> DriverUtils.verifyAnyServerNeo4jConnectivity(cluster))
+			.isInstanceOf(Neo4jException.class);
 
 		// when
 		cluster.startServers(stoppedServers);
 		cluster.waitForBoltOnAll(stoppedServers, Duration.ofMinutes(3));
 
 		// then
-		verifyAllServersConnectivity();
+		DriverUtils.verifyAllServersConnectivity(cluster);
 	}
 
 	@Test
@@ -162,7 +170,7 @@ class StopStartServersTest extends ClusterActionsTest {
 		// start the server
 		cluster.startServers(stopped);
 		cluster.waitForBoltOnAll(stopped, Duration.ofMinutes(1));
-		verifyAllServersConnectivity();
+		DriverUtils.verifyAllServersConnectivity(cluster);
 
 		// then
 		// equality and hash codes have not changed

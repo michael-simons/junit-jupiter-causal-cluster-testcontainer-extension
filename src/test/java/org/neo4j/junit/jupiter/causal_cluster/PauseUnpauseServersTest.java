@@ -18,12 +18,6 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,13 +25,27 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.commons.logging.Logger;
 import org.junit.platform.commons.logging.LoggerFactory;
+
+import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.neo4j.driver.exceptions.Neo4jException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @NeedsCausalCluster()
-class PauseUnpauseServersTest extends ClusterActionsTest {
+class PauseUnpauseServersTest {
+
+	@CausalCluster
+	static Collection<URI> clusterUris;
+	@CausalCluster
+	static Neo4jCluster cluster;
 
 	private final Logger log = LoggerFactory.getLogger(this.getClass());
 
@@ -51,7 +59,7 @@ class PauseUnpauseServersTest extends ClusterActionsTest {
 	void after() throws Neo4jCluster.Neo4jTimeoutException {
 		// make sure that nothing is broken before the cluster is handed over to the next test
 		cluster.waitForBoltOnAll(cluster.getAllServers(), Duration.ofSeconds(10));
-		verifyAllServersConnectivity();
+		DriverUtils.verifyAllServersConnectivity(cluster);
 	}
 
 	@ParameterizedTest()
@@ -62,7 +70,7 @@ class PauseUnpauseServersTest extends ClusterActionsTest {
 		Instant deadline = Instant.now().plus(Duration.ofMillis(pauseMilliseconds));
 
 		// then
-		verifyAllServersConnectivity(cluster.getAllServersExcept(paused));
+		DriverUtils.verifyAllServersConnectivity(cluster.getAllServersExcept(paused));
 
 		Duration timeRemaining = Duration.between(Instant.now(), deadline);
 		if (!timeRemaining.isNegative()) {
@@ -77,7 +85,7 @@ class PauseUnpauseServersTest extends ClusterActionsTest {
 
 		// then
 		assertThat(unpaused).containsExactlyInAnyOrderElementsOf(paused);
-		verifyAllServersConnectivity();
+		DriverUtils.verifyAllServersConnectivity(cluster);
 	}
 
 	@ParameterizedTest()
@@ -97,7 +105,8 @@ class PauseUnpauseServersTest extends ClusterActionsTest {
 		}
 
 		// then
-		assertThatThrownBy(this::verifyAnyServerNeo4jConnectivity).isInstanceOf(Neo4jException.class);
+		assertThatThrownBy(() -> DriverUtils.verifyAnyServerNeo4jConnectivity(cluster))
+			.isInstanceOf(Neo4jException.class);
 
 		// when
 		Set<Neo4jServer> unpaused = cluster.unpauseServers(pausedServers);
@@ -105,7 +114,7 @@ class PauseUnpauseServersTest extends ClusterActionsTest {
 
 		// then
 		assertThat(unpaused).containsExactlyInAnyOrderElementsOf(pausedServers);
-		verifyAllServersConnectivity();
+		DriverUtils.verifyAllServersConnectivity(cluster);
 	}
 
 	/**
@@ -132,7 +141,7 @@ class PauseUnpauseServersTest extends ClusterActionsTest {
 		// start the server
 		cluster.unpauseServers(paused);
 		cluster.waitForBoltOnAll(paused, Duration.ofMinutes(1));
-		verifyAllServersConnectivity();
+		DriverUtils.verifyAllServersConnectivity(cluster);
 
 		// then
 		// equality and hash codes have not changed
