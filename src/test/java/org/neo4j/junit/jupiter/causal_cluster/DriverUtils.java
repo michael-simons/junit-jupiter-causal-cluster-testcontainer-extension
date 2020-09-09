@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -12,8 +13,26 @@ import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Session;
 
 public class DriverUtils {
+
+	static int[] getNeo4jVersion(Neo4jCluster cluster) {
+		try (Driver driver = GraphDatabase.driver(
+			cluster.getURI(),
+			AuthTokens.basic("neo4j", "password"),
+			Config.defaultConfig());
+			Session session = driver.session();
+		) {
+			String version = session.readTransaction(tx ->
+				tx.run("call dbms.components() yield name, versions, edition " +
+					"UNWIND versions as version return name, version, edition "
+				).single().get("version").asString());
+			String[] parts = version.split("\\.");
+			return Arrays.stream(parts).mapToInt(Integer::parseInt).toArray();
+		}
+	}
+
 	static void verifyAllServersConnectivity(Collection<Neo4jServer> servers) {
 		verifyAllServersBoltConnectivity(servers);
 		verifyAllServersNeo4jConnectivity(servers);

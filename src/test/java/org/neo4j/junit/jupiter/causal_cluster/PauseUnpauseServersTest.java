@@ -18,6 +18,7 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
+import org.junit.Assume;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -91,6 +92,11 @@ class PauseUnpauseServersTest {
 	@ParameterizedTest()
 	@ValueSource(ints = { 1, 5000, 75000 })
 	void pauseAllTest(int pauseMilliseconds) throws Neo4jCluster.Neo4jTimeoutException, InterruptedException {
+
+		// ignore this for Neo4j versions below 4.2 - it will fail
+		int[] neo4jVersion = DriverUtils.getNeo4jVersion(cluster);
+		Assume.assumeTrue(neo4jVersion[0] >= 4);
+		Assume.assumeTrue(neo4jVersion[1] >= 2);
 
 		// given
 		// I stop all the servers
