@@ -89,7 +89,7 @@ class CausalClusterExtension implements BeforeAllCallback {
 
 	private String getImageName(NeedsCausalCluster annotation) {
 		String explicitImageName = annotation.customImageName();
-		return !explicitImageName.isEmpty() ? explicitImageName :
+		return !explicitImageName.trim().isEmpty() ? explicitImageName :
 			System.getenv().getOrDefault("NEO4J_IMAGE", "");
 	}
 
