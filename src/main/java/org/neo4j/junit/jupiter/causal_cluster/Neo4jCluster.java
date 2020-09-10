@@ -118,6 +118,43 @@ public interface Neo4jCluster {
 	 */
 	Set<Neo4jServer> startServers(Set<Neo4jServer> servers);
 
+	/**
+	 * Pauses {@code n} random servers.
+	 *
+	 * @param n The number of servers to pause
+	 * @return The paused servers
+	 */
+	Set<Neo4jServer> pauseRandomServers(int n);
+
+	/**
+	 * Pauses {@code n} random servers but none of the given exclusions.
+	 *
+	 * @param n          The number of servers to pause
+	 * @param exclusions Servers not to be paused
+	 * @return The paused servers
+	 */
+	default Set<Neo4jServer> pauseRandomServersExcept(int n, Neo4jServer... exclusions) {
+		return pauseRandomServersExcept(n,
+			exclusions == null ? Collections.emptySet() : Stream.of(exclusions).collect(Collectors.toSet()));
+	}
+
+	/**
+	 * Pauses {@code n} random servers but none of the given exclusions
+	 *
+	 * @param n          The number of servers to pause
+	 * @param exclusions Servers not to be paused
+	 * @return The paused servers
+	 */
+	Set<Neo4jServer> pauseRandomServersExcept(int n, Set<Neo4jServer> exclusions);
+
+	/**
+	 * Unpauses the given set of servers.
+	 *
+	 * @param servers Servers to unpause
+	 * @return The unpaused servers
+	 */
+	Set<Neo4jServer> unpauseServers(Set<Neo4jServer> servers);
+
 	void waitForLogMessageOnAll(Set<Neo4jServer> servers, String message, Duration timeout)
 		throws Neo4jTimeoutException;
 

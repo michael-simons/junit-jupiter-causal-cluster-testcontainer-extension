@@ -156,12 +156,13 @@ class NeedsCausalClusterTest {
 		}
 	}
 
-	static void verifyConnectivity(String uri) {
+	static void verifyConnectivity(URI uri) {
+		verifyConnectivity(uri.toString());
+	}
 
+	static void verifyConnectivity(String uri) {
 		try (Driver driver = GraphDatabase.driver(uri, AuthTokens.basic("neo4j", "password"))) {
 			driver.verifyConnectivity();
-		} catch (Exception e) {
-			throw e;
 		}
 	}
 
