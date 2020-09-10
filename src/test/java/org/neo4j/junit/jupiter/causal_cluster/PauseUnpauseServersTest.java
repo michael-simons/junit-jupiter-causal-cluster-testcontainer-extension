@@ -25,6 +25,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import org.junit.Assume;
@@ -80,7 +81,7 @@ class PauseUnpauseServersTest {
 
 		// then
 		assertThat(unpaused).containsExactlyInAnyOrderElementsOf(paused);
-		DriverUtils.verifyEventuallyAllServersHaveConnectivity(cluster, Duration.ofMinutes(5));
+		verifyClusterResumedSuccessfully();
 	}
 
 	@ParameterizedTest()
@@ -110,11 +111,30 @@ class PauseUnpauseServersTest {
 
 		// when
 		Set<Neo4jServer> unpaused = cluster.unpauseServers(pausedServers);
-		cluster.waitForBoltOnAll(pausedServers, Duration.ofMinutes(3));
+		cluster.waitForBoltOnAll(unpaused, Duration.ofMinutes(1));
 
 		// then
 		assertThat(unpaused).containsExactlyInAnyOrderElementsOf(pausedServers);
+		verifyClusterResumedSuccessfully();
+
+	}
+
+	private void verifyClusterResumedSuccessfully() throws TimeoutException {
+		// handling recovery from a pause is a bit strange because _immediately_ after the unpause everything functions
+		// as it did before. But then (usually within seconds) the cores realise that various things have timed out and
+		// the cores may then be unusable for a short period while they figure out what's going on.
+
+		// first wait for full connectivity
 		DriverUtils.verifyEventuallyAllServersHaveConnectivity(cluster, Duration.ofMinutes(5));
+		try {
+			// that connectivity persists uninterrupted for 1 minute
+			DriverUtils.verifyContinuouslyAllServersHaveConnectivity(cluster, Duration.ofMinutes(2));
+		} catch (Exception e) {
+			// if something goes wrong we retry once
+			log.warn(() -> "Connectivity lost (retrying once). Cause: " + e.toString());
+			DriverUtils.verifyEventuallyAllServersHaveConnectivity(cluster, Duration.ofMinutes(5));
+			DriverUtils.verifyContinuouslyAllServersHaveConnectivity(cluster, Duration.ofMinutes(2));
+		}
 	}
 
 	/**
@@ -141,7 +161,8 @@ class PauseUnpauseServersTest {
 		// start the server
 		cluster.unpauseServers(paused);
 		cluster.waitForBoltOnAll(paused, Duration.ofMinutes(1));
-		DriverUtils.verifyEventuallyAllServersHaveConnectivity(cluster, Duration.ofMinutes(1));
+
+		verifyClusterResumedSuccessfully();
 
 		// then
 		// equality and hash codes have not changed
