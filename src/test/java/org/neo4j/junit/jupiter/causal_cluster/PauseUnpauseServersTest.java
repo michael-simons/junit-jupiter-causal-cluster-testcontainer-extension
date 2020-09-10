@@ -18,6 +18,9 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import org.junit.Assume;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,11 +37,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import org.neo4j.driver.exceptions.Neo4jException;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @NeedsCausalCluster()
 class PauseUnpauseServersTest {
@@ -60,18 +58,18 @@ class PauseUnpauseServersTest {
 	void after() throws Neo4jCluster.Neo4jTimeoutException {
 		// make sure that nothing is broken before the cluster is handed over to the next test
 		cluster.waitForBoltOnAll(cluster.getAllServers(), Duration.ofSeconds(10));
-		DriverUtils.verifyAllServersConnectivity(cluster);
+		DriverUtils.verifyAllServersHaveConnectivity(cluster);
 	}
 
 	@ParameterizedTest()
 	@ValueSource(ints = { 1, 5000, 15000, 75000 })
-	void pauseOneTest(int pauseMilliseconds) throws Neo4jCluster.Neo4jTimeoutException, InterruptedException {
+	void pauseOneTest(int pauseMilliseconds) throws Exception {
 		// given
 		Set<Neo4jServer> paused = cluster.pauseRandomServers(1);
 		Instant deadline = Instant.now().plus(Duration.ofMillis(pauseMilliseconds));
 
 		// then
-		DriverUtils.verifyAllServersConnectivity(cluster.getAllServersExcept(paused));
+		DriverUtils.verifyAllServersHaveConnectivity(cluster.getAllServersExcept(paused));
 
 		Duration timeRemaining = Duration.between(Instant.now(), deadline);
 		if (!timeRemaining.isNegative()) {
@@ -86,12 +84,12 @@ class PauseUnpauseServersTest {
 
 		// then
 		assertThat(unpaused).containsExactlyInAnyOrderElementsOf(paused);
-		DriverUtils.verifyAllServersConnectivity(cluster);
+		DriverUtils.verifyEventuallyAllServersHaveConnectivity(cluster, Duration.ofMinutes(5));
 	}
 
 	@ParameterizedTest()
 	@ValueSource(ints = { 1, 5000, 75000 })
-	void pauseAllTest(int pauseMilliseconds) throws Neo4jCluster.Neo4jTimeoutException, InterruptedException {
+	void pauseAllTest(int pauseMilliseconds) throws Exception {
 
 		// ignore this for Neo4j versions below 4.2 - it will fail
 		int[] neo4jVersion = DriverUtils.getNeo4jVersion(cluster);
@@ -111,8 +109,8 @@ class PauseUnpauseServersTest {
 		}
 
 		// then
-		assertThatThrownBy(() -> DriverUtils.verifyAnyServerNeo4jConnectivity(cluster))
-			.isInstanceOf(Neo4jException.class);
+		assertThatThrownBy(() -> DriverUtils.verifyAnyServersHaveConnectivity(cluster))
+			.satisfies(DriverUtils::hasSuppressedNeo4jException);
 
 		// when
 		Set<Neo4jServer> unpaused = cluster.unpauseServers(pausedServers);
@@ -120,7 +118,7 @@ class PauseUnpauseServersTest {
 
 		// then
 		assertThat(unpaused).containsExactlyInAnyOrderElementsOf(pausedServers);
-		DriverUtils.verifyAllServersConnectivity(cluster);
+		DriverUtils.verifyEventuallyAllServersHaveConnectivity(cluster, Duration.ofMinutes(5));
 	}
 
 	/**
@@ -128,7 +126,7 @@ class PauseUnpauseServersTest {
 	 * stopped/started/killed and we want to ensure that does not mess with our ideas of server equality.
 	 */
 	@Test
-	void serverComparisonTest() throws Neo4jCluster.Neo4jTimeoutException {
+	void serverComparisonTest() throws Exception {
 
 		// given
 		Set<Neo4jServer> allServersBefore = cluster.getAllServers();
@@ -147,7 +145,7 @@ class PauseUnpauseServersTest {
 		// start the server
 		cluster.unpauseServers(paused);
 		cluster.waitForBoltOnAll(paused, Duration.ofMinutes(1));
-		DriverUtils.verifyAllServersConnectivity(cluster);
+		DriverUtils.verifyEventuallyAllServersHaveConnectivity(cluster, Duration.ofMinutes(1));
 
 		// then
 		// equality and hash codes have not changed

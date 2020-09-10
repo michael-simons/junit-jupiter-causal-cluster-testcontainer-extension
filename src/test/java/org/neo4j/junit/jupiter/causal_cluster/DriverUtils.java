@@ -21,10 +21,13 @@ package org.neo4j.junit.jupiter.causal_cluster;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import org.neo4j.driver.AuthTokens;
@@ -32,13 +35,38 @@ import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
+import org.neo4j.driver.exceptions.Neo4jException;
 
 /**
  * Test utilities for tasks that require a Neo4j Driver
  */
 class DriverUtils {
 
-	static int[] getNeo4jVersion(Neo4jCluster cluster) {
+	public static void verifyAllServersHaveConnectivity(Neo4jCluster cluster) {
+		verifyAllServersHaveConnectivity(cluster.getAllServers());
+	}
+
+	public static void verifyAllServersHaveConnectivity(Collection<Neo4jServer> servers) {
+		verifyAllServersBoltConnectivity(servers);
+		verifyAllServersNeo4jConnectivity(servers);
+	}
+
+	public static void verifyAnyServersHaveConnectivity(Neo4jCluster cluster) {
+		verifyAnyServersHaveConnectivity(cluster.getAllServers());
+	}
+
+	public static void verifyAnyServersHaveConnectivity(Collection<Neo4jServer> servers) {
+		verifyAnyServersBoltConnectivity(servers);
+		verifyAnyServersNeo4jConnectivity(servers);
+	}
+
+	public static void verifyEventuallyAllServersHaveConnectivity(Neo4jCluster cluster, Duration timeout)
+		throws TimeoutException {
+		eventually(() -> verifyAllServersHaveConnectivity(cluster.getAllServers()),
+			timeout, "Verifying all servers have connectivity");
+	}
+
+	public static int[] getNeo4jVersion(Neo4jCluster cluster) {
 		try (Driver driver = GraphDatabase.driver(
 			cluster.getURI(),
 			AuthTokens.basic("neo4j", "password"),
@@ -54,12 +82,7 @@ class DriverUtils {
 		}
 	}
 
-	static void verifyAllServersConnectivity(Collection<Neo4jServer> servers) {
-		verifyAllServersBoltConnectivity(servers);
-		verifyAllServersNeo4jConnectivity(servers);
-	}
-
-	static void verifyAllServersBoltConnectivity(Collection<Neo4jServer> servers) {
+	private static void verifyAllServersBoltConnectivity(Collection<Neo4jServer> servers) {
 		// Verify connectivity
 		List<String> boltAddresses = servers.stream()
 			.map(Neo4jServer::getDirectBoltUri)
@@ -78,27 +101,35 @@ class DriverUtils {
 		NeedsCausalClusterTest.verifyConnectivity(boltAddresses);
 	}
 
-	static void verifyAllServersConnectivity(Neo4jCluster cluster) {
-		verifyAllServersConnectivity(cluster.getAllServers());
+	private static void eventually(Runnable fn, Duration timeout, String description) throws TimeoutException {
+
+		Instant deadline = Instant.now().plus(timeout);
+		Exception lastException = null;
+		while (Instant.now().isBefore(deadline)) {
+			try {
+				fn.run();
+				return;
+			} catch (Exception e) {
+				lastException = e;
+			}
+		}
+		TimeoutException e = new TimeoutException("Timed out performing: " + description);
+		e.addSuppressed(lastException == null ?
+			new Exception("Timeout elapsed before first attempt.") : lastException);
+		throw e;
 	}
 
-	static void verifyAnyServerNeo4jConnectivity(Neo4jCluster cluster) {
-		verifyAnyServerNeo4jConnectivity(cluster.getURIs());
+	private static void verifyAnyServersNeo4jConnectivity(Neo4jCluster cluster) {
+		verifyAnyServersNeo4jConnectivity(cluster.getAllServers());
 	}
 
-	static void verifyAnyServerNeo4jConnectivity(Collection<URI> clusterUris) {
+	private static void verifyAnyServersNeo4jConnectivity(Collection<Neo4jServer> servers) {
 		// Verify connectivity
 		List<Exception> exceptions = new ArrayList<>();
-		for (URI clusterUri : clusterUris) {
+		for (URI clusterUri : servers.stream().map(Neo4jServer::getURI).collect(Collectors.toList())) {
 			assertThat(clusterUri.toString()).startsWith("neo4j://");
-			try (Driver driver = GraphDatabase.driver(
-				clusterUri,
-				AuthTokens.basic("neo4j", "password"),
-				Config.defaultConfig()
-			)) {
-				driver.verifyConnectivity();
-
-				// If any connection succeeds we return
+			try {
+				NeedsCausalClusterTest.verifyConnectivity(clusterUri);
 				return;
 			} catch (Exception e) {
 				exceptions.add(e);
@@ -107,8 +138,41 @@ class DriverUtils {
 
 		// If we reach here they all failed. This assertion will fail and log the exceptions
 		if (!exceptions.isEmpty()) {
-			// TODO aggregate exceptions properly
-			throw new RuntimeException(exceptions.get(0));
+			// TODO aggregate exceptions better?
+			RuntimeException e = new RuntimeException();
+			exceptions.forEach(e::addSuppressed);
+			throw e;
 		}
+	}
+
+	private static void verifyAnyServersBoltConnectivity(Collection<Neo4jServer> servers) {
+		// Verify connectivity
+		List<Exception> exceptions = new ArrayList<>();
+		for (URI clusterUri : servers.stream().map(Neo4jServer::getDirectBoltUri).collect(Collectors.toList())) {
+			assertThat(clusterUri.toString()).startsWith("bolt://");
+			try {
+				NeedsCausalClusterTest.verifyConnectivity(clusterUri);
+				return;
+			} catch (Exception e) {
+				exceptions.add(e);
+			}
+		}
+
+		// If we reach here they all failed. This assertion will fail and log the exceptions
+		if (!exceptions.isEmpty()) {
+			// TODO aggregate exceptions better?
+			RuntimeException e = new RuntimeException();
+			exceptions.forEach(e::addSuppressed);
+			throw e;
+		}
+	}
+
+	public static <T extends Throwable> void hasSuppressedNeo4jException(T exception) {
+		for (Throwable suppressed : exception.getSuppressed()) {
+			if (suppressed instanceof Neo4jException) {
+				return;
+			}
+		}
+		assertThat(exception).isInstanceOf(Neo4jException.class);
 	}
 }

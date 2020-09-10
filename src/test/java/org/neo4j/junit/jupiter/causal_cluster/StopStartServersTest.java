@@ -18,13 +18,9 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.junit.platform.commons.logging.Logger;
-import org.junit.platform.commons.logging.LoggerFactory;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.net.URI;
 import java.time.Duration;
@@ -33,14 +29,17 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import org.neo4j.driver.exceptions.Neo4jException;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.platform.commons.logging.Logger;
+import org.junit.platform.commons.logging.LoggerFactory;
 
 @NeedsCausalCluster()
 class StopStartServersTest {
@@ -64,19 +63,19 @@ class StopStartServersTest {
 	void after() throws Neo4jCluster.Neo4jTimeoutException {
 		// make sure that nothing is broken before the cluster is handed over to the next test
 		cluster.waitForBoltOnAll(cluster.getAllServers(), Duration.ofSeconds(10));
-		DriverUtils.verifyAllServersConnectivity(cluster);
+		DriverUtils.verifyAllServersHaveConnectivity(cluster);
 	}
 
 	@ParameterizedTest()
 	@ValueSource(ints = { 1, 5000, 15000, 75000 })
-	void stopOneTest(int stopMilliseconds) throws Neo4jCluster.Neo4jTimeoutException, InterruptedException {
+	void stopOneTest(int stopMilliseconds) throws Exception {
 		// given
 		Set<Neo4jServer> stopped = cluster.stopRandomServers(1);
 		Instant deadline = Instant.now().plus(Duration.ofMillis(stopMilliseconds));
 
 		// then
 		assertThat(stopped).hasSize(1).first().satisfies(logsSinceStartContainingStoppedMessage());
-		DriverUtils.verifyAllServersConnectivity(cluster.getAllServersExcept(stopped));
+		DriverUtils.verifyAllServersHaveConnectivity(cluster.getAllServersExcept(stopped));
 
 		Duration timeRemaining = Duration.between(Instant.now(), deadline);
 		if (!timeRemaining.isNegative()) {
@@ -88,6 +87,7 @@ class StopStartServersTest {
 		// when
 		Set<Neo4jServer> started = cluster.startServers(stopped);
 		cluster.waitForBoltOnAll(started, Duration.ofMinutes(1));
+		DriverUtils.verifyEventuallyAllServersHaveConnectivity(cluster, Duration.ofMinutes(1));
 
 		// then
 		assertThat(started).containsExactlyInAnyOrderElementsOf(stopped);
@@ -98,7 +98,7 @@ class StopStartServersTest {
 	}
 
 	@Test
-	void stopAllTest() throws Neo4jCluster.Neo4jTimeoutException {
+	void stopAllTest() throws Neo4jCluster.Neo4jTimeoutException, TimeoutException {
 
 		// given
 		// I stop all the servers
@@ -106,15 +106,15 @@ class StopStartServersTest {
 
 		// then
 		assertThat(stoppedServers).allSatisfy(logsSinceStartContainingStoppedMessage());
-		assertThatThrownBy(() -> DriverUtils.verifyAnyServerNeo4jConnectivity(cluster))
-			.isInstanceOf(Neo4jException.class);
+		assertThatThrownBy(() -> DriverUtils.verifyAnyServersHaveConnectivity(cluster))
+			.satisfies(DriverUtils::hasSuppressedNeo4jException);
 
 		// when
 		cluster.startServers(stoppedServers);
 		cluster.waitForBoltOnAll(stoppedServers, Duration.ofMinutes(3));
 
 		// then
-		DriverUtils.verifyAllServersConnectivity(cluster);
+		DriverUtils.verifyEventuallyAllServersHaveConnectivity(cluster, Duration.ofMinutes(5));
 	}
 
 	@Test
@@ -151,7 +151,7 @@ class StopStartServersTest {
 	 * stopped/started/killed and we want to ensure that does not mess with our ideas of server equality.
 	 */
 	@Test
-	void serverComparisonTest() throws Neo4jCluster.Neo4jTimeoutException {
+	void serverComparisonTest() throws Neo4jCluster.Neo4jTimeoutException, TimeoutException {
 
 		// given
 		Set<Neo4jServer> allServersBefore = cluster.getAllServers();
@@ -170,7 +170,7 @@ class StopStartServersTest {
 		// start the server
 		cluster.startServers(stopped);
 		cluster.waitForBoltOnAll(stopped, Duration.ofMinutes(1));
-		DriverUtils.verifyAllServersConnectivity(cluster);
+		DriverUtils.verifyEventuallyAllServersHaveConnectivity(cluster, Duration.ofMinutes(1));
 
 		// then
 		// equality and hash codes have not changed
