@@ -21,6 +21,12 @@ package org.neo4j.junit.jupiter.causal_cluster;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.junit.Assume;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,19 +36,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.commons.logging.Logger;
 import org.junit.platform.commons.logging.LoggerFactory;
 
-import java.net.URI;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-@NeedsCausalCluster()
+@NeedsCausalCluster
 class PauseUnpauseServersTest {
 
-	@CausalCluster
-	static Collection<URI> clusterUris;
 	@CausalCluster
 	static Neo4jCluster cluster;
 

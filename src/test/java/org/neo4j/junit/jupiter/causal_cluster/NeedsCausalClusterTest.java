@@ -36,9 +36,6 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.platform.engine.discovery.DiscoverySelectors;
 import org.junit.platform.testkit.engine.EngineTestKit;
 import org.junit.platform.testkit.engine.Events;
-import org.neo4j.driver.AuthTokens;
-import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 
 /**
  * Testing the test.
@@ -142,28 +139,12 @@ class NeedsCausalClusterTest {
 		}
 	}
 
-	static void verifyConnectivity(Neo4jCluster cluster) {
+	private static void verifyConnectivityOfAllServer(Neo4jCluster cluster) {
 		List<String> clusterUris = cluster.getAllServers().stream()
 			.map(c -> c.getURI().toString())
 			.collect(Collectors.toList());
 
-		verifyConnectivity(clusterUris);
-	}
-
-	static void verifyConnectivity(Collection<String> clusterUris) {
-		for (String clusterUri : clusterUris) {
-			verifyConnectivity(clusterUri);
-		}
-	}
-
-	static void verifyConnectivity(URI uri) {
-		verifyConnectivity(uri.toString());
-	}
-
-	static void verifyConnectivity(String uri) {
-		try (Driver driver = GraphDatabase.driver(uri, AuthTokens.basic("neo4j", "password"))) {
-			driver.verifyConnectivity();
-		}
+		DriverUtils.verifyConnectivity(clusterUris);
 	}
 
 	@NeedsCausalCluster
@@ -176,7 +157,7 @@ class NeedsCausalClusterTest {
 		void aTest() {
 
 			assertThat(clusterUri).isNotNull();
-			verifyConnectivity(clusterUri);
+			DriverUtils.verifyConnectivity(clusterUri);
 		}
 	}
 
@@ -191,7 +172,7 @@ class NeedsCausalClusterTest {
 
 			assertThat(clusterUris).isNotNull();
 			assertThat(clusterUris).isNotEmpty();
-			verifyConnectivity(clusterUris);
+			DriverUtils.verifyConnectivity(clusterUris);
 		}
 	}
 
@@ -205,7 +186,7 @@ class NeedsCausalClusterTest {
 		void aTest() {
 
 			assertThat(cluster).isNotNull();
-			verifyConnectivity(cluster);
+			verifyConnectivityOfAllServer(cluster);
 		}
 	}
 
@@ -240,7 +221,7 @@ class NeedsCausalClusterTest {
 
 			assertThat(distinctUris.size()).isGreaterThanOrEqualTo(1).isLessThanOrEqualTo(3);
 
-			verifyConnectivity(distinctUris);
+			DriverUtils.verifyConnectivity(distinctUris);
 		}
 	}
 
@@ -257,7 +238,7 @@ class NeedsCausalClusterTest {
 		void aTest() {
 
 			assertThat(clusterUris1).containsExactlyInAnyOrderElementsOf(clusterUris2);
-			verifyConnectivity(clusterUris1);
+			DriverUtils.verifyConnectivity(clusterUris1);
 		}
 	}
 
@@ -274,7 +255,7 @@ class NeedsCausalClusterTest {
 		void aTest() {
 
 			assertThat(cluster1.getAllServers()).isEqualTo(cluster2.getAllServers());
-			verifyConnectivity(cluster1);
+			verifyConnectivityOfAllServer(cluster1);
 		}
 	}
 
@@ -302,7 +283,7 @@ class NeedsCausalClusterTest {
 			assertThat(cluster.getAllServers().stream().map(Neo4jServer::getURI))
 				.containsExactlyInAnyOrderElementsOf(clusterUris);
 
-			verifyConnectivity(cluster);
+			verifyConnectivityOfAllServer(cluster);
 		}
 	}
 
@@ -317,7 +298,7 @@ class NeedsCausalClusterTest {
 		void aTest() {
 
 			assertThat(clusterUri).isNotNull();
-			verifyConnectivity(clusterUri);
+			DriverUtils.verifyConnectivity(clusterUri);
 		}
 	}
 
@@ -334,7 +315,7 @@ class NeedsCausalClusterTest {
 			assertThat(clusterUris)
 				.isNotNull()
 				.isNotEmpty();
-			verifyConnectivity(clusterUris);
+			DriverUtils.verifyConnectivity(clusterUris);
 		}
 	}
 
@@ -349,7 +330,7 @@ class NeedsCausalClusterTest {
 		void aTest() {
 
 			assertThat(cluster).isNotNull();
-			verifyConnectivity(cluster);
+			verifyConnectivityOfAllServer(cluster);
 		}
 	}
 
@@ -384,7 +365,7 @@ class NeedsCausalClusterTest {
 
 			assertThat(distinctUris.size()).isGreaterThanOrEqualTo(1).isLessThanOrEqualTo(3);
 
-			verifyConnectivity(distinctUris);
+			DriverUtils.verifyConnectivity(distinctUris);
 		}
 	}
 
@@ -402,7 +383,7 @@ class NeedsCausalClusterTest {
 		void aTest() {
 
 			assertThat(clusterUris1).containsExactlyInAnyOrderElementsOf(clusterUris2);
-			verifyConnectivity(clusterUris1);
+			DriverUtils.verifyConnectivity(clusterUris1);
 		}
 	}
 
@@ -420,7 +401,7 @@ class NeedsCausalClusterTest {
 		void aTest() {
 
 			assertThat(cluster1.getAllServers()).isEqualTo(cluster2.getAllServers());
-			verifyConnectivity(cluster1);
+			verifyConnectivityOfAllServer(cluster1);
 		}
 	}
 
@@ -449,7 +430,7 @@ class NeedsCausalClusterTest {
 			assertThat(cluster.getAllServers().stream().map(Neo4jServer::getURI))
 				.containsExactlyInAnyOrderElementsOf(clusterUris);
 
-			verifyConnectivity(cluster);
+			verifyConnectivityOfAllServer(cluster);
 		}
 	}
 
@@ -467,7 +448,7 @@ class NeedsCausalClusterTest {
 			void aTest() {
 
 				assertThat(clusterUri).isNotNull();
-				verifyConnectivity(clusterUri);
+				DriverUtils.verifyConnectivity(clusterUri);
 			}
 		}
 	}

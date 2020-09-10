@@ -19,14 +19,12 @@
 package org.neo4j.junit.jupiter.causal_cluster;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
@@ -41,15 +39,13 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.commons.logging.Logger;
 import org.junit.platform.commons.logging.LoggerFactory;
 
-@NeedsCausalCluster()
+@NeedsCausalCluster
 class StopStartServersTest {
 
 	private final static String NEO4J_UP_MESSAGE = "Remote interface available at";
 	private final static String NEO4J_STOPPED_GRACEFULLY_MESSAGE = "Stopped.";
 	private final Logger log = LoggerFactory.getLogger(this.getClass());
 
-	@CausalCluster
-	static Collection<URI> clusterUris;
 	@CausalCluster
 	static Neo4jCluster cluster;
 

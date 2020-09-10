@@ -40,33 +40,33 @@ import org.neo4j.driver.exceptions.Neo4jException;
 /**
  * Test utilities for tasks that require a Neo4j Driver
  */
-class DriverUtils {
+final class DriverUtils {
 
-	public static void verifyAllServersHaveConnectivity(Neo4jCluster cluster) {
+	static void verifyAllServersHaveConnectivity(Neo4jCluster cluster) {
 		verifyAllServersHaveConnectivity(cluster.getAllServers());
 	}
 
-	public static void verifyAllServersHaveConnectivity(Collection<Neo4jServer> servers) {
+	static void verifyAllServersHaveConnectivity(Collection<Neo4jServer> servers) {
 		verifyAllServersBoltConnectivity(servers);
 		verifyAllServersNeo4jConnectivity(servers);
 	}
 
-	public static void verifyAnyServersHaveConnectivity(Neo4jCluster cluster) {
+	static void verifyAnyServersHaveConnectivity(Neo4jCluster cluster) {
 		verifyAnyServersHaveConnectivity(cluster.getAllServers());
 	}
 
-	public static void verifyAnyServersHaveConnectivity(Collection<Neo4jServer> servers) {
+	static void verifyAnyServersHaveConnectivity(Collection<Neo4jServer> servers) {
 		verifyAnyServersBoltConnectivity(servers);
 		verifyAnyServersNeo4jConnectivity(servers);
 	}
 
-	public static void verifyEventuallyAllServersHaveConnectivity(Neo4jCluster cluster, Duration timeout)
+	static void verifyEventuallyAllServersHaveConnectivity(Neo4jCluster cluster, Duration timeout)
 		throws TimeoutException {
 		eventually(() -> verifyAllServersHaveConnectivity(cluster.getAllServers()),
 			timeout, "Verifying all servers have connectivity");
 	}
 
-	public static int[] getNeo4jVersion(Neo4jCluster cluster) {
+	static int[] getNeo4jVersion(Neo4jCluster cluster) {
 		try (Driver driver = GraphDatabase.driver(
 			cluster.getURI(),
 			AuthTokens.basic("neo4j", "password"),
@@ -88,7 +88,7 @@ class DriverUtils {
 			.map(Neo4jServer::getDirectBoltUri)
 			.map(URI::toString)
 			.collect(Collectors.toList());
-		NeedsCausalClusterTest.verifyConnectivity(boltAddresses);
+		verifyConnectivity(boltAddresses);
 	}
 
 	private static void verifyAllServersNeo4jConnectivity(Collection<Neo4jServer> servers) {
@@ -98,7 +98,7 @@ class DriverUtils {
 			.map(URI::toString)
 			.peek(s -> assertThat(s).startsWith("neo4j://"))
 			.collect(Collectors.toList());
-		NeedsCausalClusterTest.verifyConnectivity(boltAddresses);
+		verifyConnectivity(boltAddresses);
 	}
 
 	private static void eventually(Runnable fn, Duration timeout, String description) throws TimeoutException {
@@ -129,7 +129,7 @@ class DriverUtils {
 		for (URI clusterUri : servers.stream().map(Neo4jServer::getURI).collect(Collectors.toList())) {
 			assertThat(clusterUri.toString()).startsWith("neo4j://");
 			try {
-				NeedsCausalClusterTest.verifyConnectivity(clusterUri);
+				verifyConnectivity(clusterUri);
 				return;
 			} catch (Exception e) {
 				exceptions.add(e);
@@ -151,7 +151,7 @@ class DriverUtils {
 		for (URI clusterUri : servers.stream().map(Neo4jServer::getDirectBoltUri).collect(Collectors.toList())) {
 			assertThat(clusterUri.toString()).startsWith("bolt://");
 			try {
-				NeedsCausalClusterTest.verifyConnectivity(clusterUri);
+				verifyConnectivity(clusterUri);
 				return;
 			} catch (Exception e) {
 				exceptions.add(e);
@@ -167,12 +167,31 @@ class DriverUtils {
 		}
 	}
 
-	public static <T extends Throwable> void hasSuppressedNeo4jException(T exception) {
+	static <T extends Throwable> void hasSuppressedNeo4jException(T exception) {
 		for (Throwable suppressed : exception.getSuppressed()) {
 			if (suppressed instanceof Neo4jException) {
 				return;
 			}
 		}
 		assertThat(exception).isInstanceOf(Neo4jException.class);
+	}
+
+	static void verifyConnectivity(Collection<String> clusterUris) {
+		for (String clusterUri : clusterUris) {
+			verifyConnectivity(URI.create(clusterUri));
+		}
+	}
+
+	static void verifyConnectivity(String uri) {
+		verifyConnectivity(URI.create(uri));
+	}
+
+	static void verifyConnectivity(URI uri) {
+		try (Driver driver = GraphDatabase.driver(uri, AuthTokens.basic("neo4j", "password"))) {
+			driver.verifyConnectivity();
+		}
+	}
+
+	private DriverUtils() {
 	}
 }
