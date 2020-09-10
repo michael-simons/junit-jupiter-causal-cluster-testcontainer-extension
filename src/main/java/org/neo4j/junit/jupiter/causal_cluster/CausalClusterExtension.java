@@ -80,11 +80,17 @@ class CausalClusterExtension implements BeforeAllCallback {
 					.withNumberOfReadReplicas(annotation.numberOfReadReplicas())
 					.withStartupTimeout(Duration.ofMillis(annotation.startupTimeOutInMillis()))
 					.withPassword(annotation.password())
-					.withCustomImageName(annotation.customImageName());
+					.withCustomImageName(getImageName(annotation));
 				store.put(KEY_CONFIG, configuration);
 
 				injectFields(context, context.getTestInstances().map(TestInstances::getInnermostInstance).orElse(null));
 			});
+	}
+
+	private String getImageName(NeedsCausalCluster annotation) {
+		String explicitImageName = annotation.customImageName();
+		return !explicitImageName.isEmpty() ? explicitImageName :
+			System.getenv().getOrDefault("NEO4J_IMAGE", "");
 	}
 
 	private void injectFields(ExtensionContext context, Object testInstance) {
