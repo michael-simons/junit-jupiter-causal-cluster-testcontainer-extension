@@ -131,7 +131,7 @@ class PauseUnpauseServersTest {
 		// first wait for full connectivity
 		DriverUtils.verifyEventuallyAllServersHaveConnectivity(cluster, Duration.ofMinutes(5));
 		try {
-			// that connectivity persists uninterrupted for 1 minute
+			// that connectivity persists uninterrupted for 2 minutes
 			DriverUtils.verifyContinuouslyAllServersHaveConnectivity(cluster, Duration.ofMinutes(2));
 
 		} catch (Exception e) {

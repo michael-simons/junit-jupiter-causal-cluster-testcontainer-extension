@@ -27,13 +27,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 
+import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Logging;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.exceptions.Neo4jException;
 
@@ -41,6 +45,18 @@ import org.neo4j.driver.exceptions.Neo4jException;
  * Test utilities for tasks that require a Neo4j Driver
  */
 final class DriverUtils {
+
+	private static final Config SINGLE_CONNECTION_FAIL_FAST_NO_LOGS = Config.builder()
+		.withMaxConnectionPoolSize(1)
+		.withEventLoopThreads(1)
+		.withConnectionTimeout(10, TimeUnit.SECONDS)
+		.withConnectionAcquisitionTimeout(10, TimeUnit.SECONDS)
+		.withMaxTransactionRetryTime(20, TimeUnit.SECONDS)
+		.withConnectionLivenessCheckTimeout(1, TimeUnit.MINUTES)
+		.withLogging(Logging.javaUtilLogging(Level.OFF))
+		.build();
+
+	private static final AuthToken neo4jUserToken = AuthTokens.basic("neo4j", "password");
 
 	static void verifyAllServersHaveConnectivity(Neo4jCluster cluster) {
 		verifyAllServersHaveConnectivity(cluster.getAllServers());
@@ -72,10 +88,8 @@ final class DriverUtils {
 	}
 
 	static int[] getNeo4jVersion(Neo4jCluster cluster) {
-		try (Driver driver = GraphDatabase.driver(
-			cluster.getURI(),
-			AuthTokens.basic("neo4j", "password"),
-			Config.defaultConfig());
+		try (
+			Driver driver = GraphDatabase.driver(cluster.getURI(), neo4jUserToken, SINGLE_CONNECTION_FAIL_FAST_NO_LOGS);
 			Session session = driver.session();
 		) {
 			String version = session.readTransaction(tx ->
@@ -203,7 +217,7 @@ final class DriverUtils {
 	}
 
 	static void verifyConnectivity(URI uri) {
-		try (Driver driver = GraphDatabase.driver(uri, AuthTokens.basic("neo4j", "password"))) {
+		try (Driver driver = GraphDatabase.driver(uri, neo4jUserToken, SINGLE_CONNECTION_FAIL_FAST_NO_LOGS)) {
 			driver.verifyConnectivity();
 		}
 	}
