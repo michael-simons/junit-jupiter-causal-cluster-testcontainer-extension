@@ -120,6 +120,10 @@ class PauseUnpauseServersTest {
 	}
 
 	private void verifyClusterResumedSuccessfully() throws TimeoutException {
+		verifyClusterResumedSuccessfully(true);
+	}
+
+	private void verifyClusterResumedSuccessfully(boolean retryOnce) throws TimeoutException {
 		// handling recovery from a pause is a bit strange because _immediately_ after the unpause everything functions
 		// as it did before. But then (usually within seconds) the cores realise that various things have timed out and
 		// the cores may then be unusable for a short period while they figure out what's going on.
@@ -129,11 +133,15 @@ class PauseUnpauseServersTest {
 		try {
 			// that connectivity persists uninterrupted for 1 minute
 			DriverUtils.verifyContinuouslyAllServersHaveConnectivity(cluster, Duration.ofMinutes(2));
+
 		} catch (Exception e) {
 			// if something goes wrong we retry once
-			log.warn(() -> "Connectivity lost (retrying once). Cause: " + e.toString());
-			DriverUtils.verifyEventuallyAllServersHaveConnectivity(cluster, Duration.ofMinutes(5));
-			DriverUtils.verifyContinuouslyAllServersHaveConnectivity(cluster, Duration.ofMinutes(2));
+			if (retryOnce) {
+				log.warn(() -> "Connectivity lost (retrying once). Cause: " + e.toString());
+				verifyClusterResumedSuccessfully(false);
+			} else {
+				throw e;
+			}
 		}
 	}
 
