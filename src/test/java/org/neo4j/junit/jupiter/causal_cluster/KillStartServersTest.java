@@ -19,8 +19,8 @@
 package org.neo4j.junit.jupiter.causal_cluster;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -40,7 +40,7 @@ import org.junit.platform.commons.logging.Logger;
 import org.junit.platform.commons.logging.LoggerFactory;
 
 @NeedsCausalCluster
-class StopStartServersTest {
+class KillStartServersTest {
 
 	private final static String NEO4J_UP_MESSAGE = "Remote interface available at";
 	private final static String NEO4J_STOPPED_GRACEFULLY_MESSAGE = "Stopped.";
@@ -64,67 +64,67 @@ class StopStartServersTest {
 
 	@ParameterizedTest()
 	@ValueSource(ints = { 1, 35000 })
-	void stopOneTest(int stopMilliseconds) throws Exception {
+	void killOneTest(int killMilliseconds) throws Exception {
 		// given
-		Set<Neo4jServer> stopped = cluster.stopRandomServers(1);
-		Instant deadline = Instant.now().plus(Duration.ofMillis(stopMilliseconds));
+		Set<Neo4jServer> killed = cluster.killRandomServers(1);
+		Instant deadline = Instant.now().plus(Duration.ofMillis(killMilliseconds));
 
 		// then
-		assertThat(stopped).hasSize(1).first().satisfies(logsSinceStartContainingStoppedMessage());
-		DriverUtils.verifyAllServersHaveConnectivity(cluster.getAllServersExcept(stopped));
+		assertThat(killed).hasSize(1).first().satisfies(logsSinceStartDoNotContainStoppedMessage());
+		DriverUtils.verifyAllServersHaveConnectivity(cluster.getAllServersExcept(killed));
 
 		Duration timeRemaining = Duration.between(Instant.now(), deadline);
 		if (!timeRemaining.isNegative()) {
 			Thread.sleep(timeRemaining.toMillis());
 		} else {
-			log.info(() -> "Restarting server after " + Duration.ofMillis(stopMilliseconds).plus(timeRemaining.abs()));
+			log.info(() -> "Restarting server after " + Duration.ofMillis(killMilliseconds).plus(timeRemaining.abs()));
 		}
 
 		// when
-		Set<Neo4jServer> started = cluster.startServers(stopped);
+		Set<Neo4jServer> started = cluster.startServers(killed);
 		cluster.waitForBoltOnAll(started, Duration.ofMinutes(1));
 		DriverUtils.verifyEventuallyAllServersHaveConnectivity(cluster, Duration.ofMinutes(1));
 
 		// then
-		assertThat(started).containsExactlyInAnyOrderElementsOf(stopped);
+		assertThat(started).containsExactlyInAnyOrderElementsOf(killed);
 	}
 
-	private static Consumer<Neo4jServer> logsSinceStartContainingStoppedMessage() {
-		return s -> assertThat(s.getContainerLogsSinceStart()).contains(NEO4J_STOPPED_GRACEFULLY_MESSAGE);
+	private static Consumer<Neo4jServer> logsSinceStartDoNotContainStoppedMessage() {
+		return s -> assertThat(s.getContainerLogsSinceStart()).doesNotContain(NEO4J_STOPPED_GRACEFULLY_MESSAGE);
 	}
 
 	@Test
-	void stopAllTest() throws Neo4jCluster.Neo4jTimeoutException, TimeoutException {
+	void killAllTest() throws Neo4jCluster.Neo4jTimeoutException, TimeoutException {
 
 		// given
-		// I stop all the servers
-		Set<Neo4jServer> stoppedServers = cluster.stopRandomServers(cluster.getAllServers().size());
+		// I kill all the servers
+		Set<Neo4jServer> killedServers = cluster.killRandomServers(cluster.getAllServers().size());
 
 		// then
-		assertThat(stoppedServers).allSatisfy(logsSinceStartContainingStoppedMessage());
+		assertThat(killedServers).allSatisfy(logsSinceStartDoNotContainStoppedMessage());
 		assertThatThrownBy(() -> DriverUtils.verifyAnyServersHaveConnectivity(cluster))
 			.satisfies(DriverUtils::hasSuppressedNeo4jException);
 
 		// when
-		cluster.startServers(stoppedServers);
-		cluster.waitForBoltOnAll(stoppedServers, Duration.ofMinutes(3));
+		cluster.startServers(killedServers);
+		cluster.waitForBoltOnAll(killedServers, Duration.ofMinutes(3));
 
 		// then
 		DriverUtils.verifyEventuallyAllServersHaveConnectivity(cluster, Duration.ofMinutes(5));
 	}
 
 	@Test
-	void loggingWhenStoppedTest() throws Neo4jCluster.Neo4jTimeoutException {
+	void loggingWhenKilledTest() throws Neo4jCluster.Neo4jTimeoutException {
 
 		// given
-		Set<Neo4jServer> stopped = cluster.stopRandomServers(1);
-		String oldUpMessage = getNeo4jUpMessageLine(stopped.stream().findFirst().get());
+		Set<Neo4jServer> killed = cluster.killRandomServers(1);
+		String oldUpMessage = getNeo4jUpMessageLine(killed.stream().findFirst().get());
 
 		// then
-		assertThatIllegalStateException().isThrownBy(() -> waitForNeo4jUpMessage(stopped));
+		assertThatIllegalStateException().isThrownBy(() -> waitForNeo4jUpMessage(killed));
 
 		// when
-		Set<Neo4jServer> started = cluster.startServers(stopped);
+		Set<Neo4jServer> started = cluster.startServers(killed);
 		cluster.waitForBoltOnAll(started, Duration.ofMinutes(3));
 		waitForNeo4jUpMessage(started);
 
@@ -135,8 +135,8 @@ class StopStartServersTest {
 				.doesNotContain(oldUpMessage);
 			assertThat(s.getContainerLogs())
 				.contains(NEO4J_UP_MESSAGE)
-				.contains(NEO4J_STOPPED_GRACEFULLY_MESSAGE)
-				.contains(oldUpMessage);
+				.contains(oldUpMessage)
+				.doesNotContain(NEO4J_STOPPED_GRACEFULLY_MESSAGE);
 		});
 		assertThatThrownBy(
 			() -> cluster.waitForLogMessageOnAll(started, oldUpMessage, Duration.ofSeconds(10))
@@ -154,9 +154,9 @@ class StopStartServersTest {
 		Set<Neo4jServer> allServersBefore = cluster.getAllServers();
 		List<Integer> hashCodesBefore = allServersBefore.stream().map(Object::hashCode).collect(Collectors.toList());
 
-		// stop a server
-		Set<Neo4jServer> stopped = cluster.stopRandomServers(1);
-		assertThat(allServersBefore).containsAll(stopped);
+		// kill a server
+		Set<Neo4jServer> killed = cluster.killRandomServers(1);
+		assertThat(allServersBefore).containsAll(killed);
 
 		// check hash codes etc,
 		Set<Neo4jServer> allServersAfter = cluster.getAllServers();
@@ -165,8 +165,8 @@ class StopStartServersTest {
 		assertThat(hashCodesAfter).containsExactlyInAnyOrderElementsOf(hashCodesBefore);
 
 		// start the server
-		cluster.startServers(stopped);
-		cluster.waitForBoltOnAll(stopped, Duration.ofMinutes(1));
+		cluster.startServers(killed);
+		cluster.waitForBoltOnAll(killed, Duration.ofMinutes(1));
 		DriverUtils.verifyEventuallyAllServersHaveConnectivity(cluster, Duration.ofMinutes(1));
 
 		// then
