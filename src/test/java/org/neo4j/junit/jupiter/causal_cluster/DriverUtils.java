@@ -66,6 +66,11 @@ final class DriverUtils {
 			timeout, "Verifying all servers have connectivity");
 	}
 
+	static void verifyContinuouslyAllServersHaveConnectivity(Neo4jCluster cluster, Duration timeout) {
+		continuously(() -> verifyAllServersHaveConnectivity(cluster.getAllServers()),
+			timeout, "Verifying all servers have connectivity");
+	}
+
 	static int[] getNeo4jVersion(Neo4jCluster cluster) {
 		try (Driver driver = GraphDatabase.driver(
 			cluster.getURI(),
@@ -117,6 +122,17 @@ final class DriverUtils {
 		e.addSuppressed(lastException == null ?
 			new Exception("Timeout elapsed before first attempt.") : lastException);
 		throw e;
+	}
+
+	private static void continuously(Runnable fn, Duration timeout, String description) {
+
+		Instant deadline = Instant.now().plus(timeout);
+		int count = 0;
+		while (Instant.now().isBefore(deadline)) {
+			fn.run();
+			count += 1;
+		}
+		assertThat(count).as(description).isGreaterThan(0);
 	}
 
 	private static void verifyAnyServersNeo4jConnectivity(Neo4jCluster cluster) {
