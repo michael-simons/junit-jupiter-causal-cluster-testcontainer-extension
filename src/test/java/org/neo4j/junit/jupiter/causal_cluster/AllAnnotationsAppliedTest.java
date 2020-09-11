@@ -156,7 +156,7 @@ class AllAnnotationsAppliedTest {
 	@Test
 	void verifyConnectivity() {
 		// Verify connectivity
-		NeedsCausalClusterTest.verifyConnectivity(clusterUriListOfStrings);
+		DriverUtils.verifyConnectivity(clusterUriListOfStrings);
 	}
 
 }
