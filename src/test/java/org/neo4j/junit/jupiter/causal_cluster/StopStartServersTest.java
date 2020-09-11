@@ -63,7 +63,7 @@ class StopStartServersTest {
 	}
 
 	@ParameterizedTest()
-	@ValueSource(ints = { 1, 5000, 15000, 75000 })
+	@ValueSource(ints = { 1, 35000 })
 	void stopOneTest(int stopMilliseconds) throws Exception {
 		// given
 		Set<Neo4jServer> stopped = cluster.stopRandomServers(1);

@@ -59,7 +59,7 @@ class PauseUnpauseServersTest {
 	}
 
 	@ParameterizedTest()
-	@ValueSource(ints = { 1, 5000, 15000, 75000 })
+	@ValueSource(ints = { 1, 35000 })
 	void pauseOneTest(int pauseMilliseconds) throws Exception {
 		// given
 		Set<Neo4jServer> paused = cluster.pauseRandomServers(1);
@@ -85,7 +85,7 @@ class PauseUnpauseServersTest {
 	}
 
 	@ParameterizedTest()
-	@ValueSource(ints = { 1, 5000, 75000 })
+	@ValueSource(ints = { 1, 35000 })
 	void pauseAllTest(int pauseMilliseconds) throws Exception {
 
 		// ignore this for Neo4j versions below 4.2 - it will fail
