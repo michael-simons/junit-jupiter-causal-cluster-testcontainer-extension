@@ -37,6 +37,11 @@ import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer.Type;
  */
 public interface Neo4jCluster {
 
+	Duration NEO4J_CONTAINER_START_TIMEOUT = Duration.ofMinutes(3);
+
+	// TODO: respect the relevant environment var that we use to modify this in most places
+	Duration NEO4J_CONTAINER_STOP_TIMEOUT = Duration.ofMinutes(2);
+
 	/**
 	 * This method is guaranteed to return the URI of a core server and never a replica.
 	 *
@@ -82,7 +87,12 @@ public interface Neo4jCluster {
 	Set<Neo4jServer> getAllServersExcept(Set<Neo4jServer> exclusions);
 
 	/**
-	 * Stops {@code n} random server.
+	 * Stops {@code n} random servers.
+	 *
+	 * This method sends a SIGTERM. Upon receipt of the signal neo4j will shut down gracefully and the process will
+	 * terminate once neo4j has finished its shutdown tasks such as writing checkpoints to disk and standing down from
+	 * the cluster membership. If the process does not terminate within the {@link NEO4J_CONTAINER_STOP_TIMEOUT} then
+	 * a SIGKILL is sent and the process is terminated.
 	 *
 	 * @param n The number of servers to stop
 	 * @return The stopped servers
@@ -90,7 +100,12 @@ public interface Neo4jCluster {
 	Set<Neo4jServer> stopRandomServers(int n);
 
 	/**
-	 * Stops {@code n} random server but none of the given exclusions.
+	 * Stops {@code n} random servers but none of the given exclusions.
+	 *
+	 * This method sends a SIGTERM. Upon receipt of the signal neo4j will shut down gracefully and the process will
+	 * terminate once neo4j has finished its shutdown tasks such as writing checkpoints to disk and standing down from
+	 * the cluster membership. If the process does not terminate within the {@link NEO4J_CONTAINER_STOP_TIMEOUT} then
+	 * a SIGKILL is sent and the process is terminated.
 	 *
 	 * @param n          The number of servers to stop
 	 * @param exclusions Servers not to be stopped
@@ -102,13 +117,56 @@ public interface Neo4jCluster {
 	}
 
 	/**
-	 * Stops {@code n} random server but none of the given exclusions
+	 * Stops {@code n} random servers but none of the given exclusions.
+	 *
+	 * This method sends a SIGTERM. Upon receipt of the signal neo4j will shut down gracefully and the process will
+	 * terminate once neo4j has finished its shutdown tasks such as writing checkpoints to disk and standing down from
+	 * the cluster membership. If the process does not terminate within the {@link NEO4J_CONTAINER_STOP_TIMEOUT} then
+	 * a SIGKILL is sent and the process is terminated.
 	 *
 	 * @param n          The number of servers to stop
 	 * @param exclusions Servers not to be stopped
 	 * @return The stopped servers
 	 */
 	Set<Neo4jServer> stopRandomServersExcept(int n, Set<Neo4jServer> exclusions);
+
+	/**
+	 * Kills {@code n} random servers.
+	 *
+	 * This method sends a SIGKILL. Upon receipt of the signal neo4j will shut down immediately without performing
+	 * shutdown tasks such as writing checkpoints to disk and standing down from the cluster membership.
+	 *
+	 * @param n The number of servers to kill
+	 * @return The killed servers
+	 */
+	Set<Neo4jServer> killRandomServers(int n);
+
+	/**
+	 * Kills {@code n} random servers but none of the given exclusions.
+	 *
+	 * This method sends a SIGKILL. Upon receipt of the signal neo4j will shut down immediately without performing
+	 * shutdown tasks such as writing checkpoints to disk and standing down from the cluster membership.
+	 *
+	 * @param n          The number of servers to kill
+	 * @param exclusions Servers not to be killed
+	 * @return The killed servers
+	 */
+	default Set<Neo4jServer> killRandomServersExcept(int n, Neo4jServer... exclusions) {
+		return killRandomServersExcept(n,
+			exclusions == null ? Collections.emptySet() : Stream.of(exclusions).collect(Collectors.toSet()));
+	}
+
+	/**
+	 * Kills {@code n} random servers but none of the given exclusions.
+	 *
+	 * This method sends a SIGKILL. Upon receipt of the signal neo4j will shut down immediately without performing
+	 * shutdown tasks such as writing checkpoints to disk and standing down from the cluster membership.
+	 *
+	 * @param n          The number of servers to kill
+	 * @param exclusions Servers not to be killed
+	 * @return The killed servers
+	 */
+	Set<Neo4jServer> killRandomServersExcept(int n, Set<Neo4jServer> exclusions);
 
 	/**
 	 * Starts the given set of servers.
@@ -160,6 +218,7 @@ public interface Neo4jCluster {
 
 	void waitForBoltOnAll(Set<Neo4jServer> servers, Duration timeout)
 		throws Neo4jTimeoutException;
+
 
 	/**
 	 * Thrown in case of time outs when dealing with the cluster or its servers.

@@ -54,9 +54,6 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 	private final static String NEO4J_BOLT_UP_MESSAGE = "Bolt enabled on";
 	private final static String NEO4J_STOPPED_MESSAGE = "Stopped.\n";
 
-	private final static Duration NEO4J_CONTAINER_START_TIMEOUT = Duration.ofMinutes(3);
-	private final static Duration NEO4J_CONTAINER_STOP_TIMEOUT = Duration.ofMinutes(2);
-
 	private final SocatContainer boltProxy;
 	private final List<DefaultNeo4jServer> clusterServers;
 
@@ -119,10 +116,33 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 				.exec();
 
 			try {
-				consumer
-					.waitUntil(frame -> frame.getUtf8String().contains(NEO4J_STOPPED_MESSAGE), timeoutSeconds,
+				consumer.waitUntil(frame -> frame.getUtf8String().contains(NEO4J_STOPPED_MESSAGE), timeoutSeconds,
 						TimeUnit.SECONDS);
 				waitUntilContainerIsStopped(container);
+			} catch (TimeoutException e) {
+				throw new RuntimeException(e);
+			}
+
+			return server;
+		}).collect(Collectors.toSet());
+	}
+
+	@Override
+	public Set<Neo4jServer> killRandomServers(int n) {
+		return killRandomServersExcept(n, Collections.emptySet());
+	}
+
+	@Override
+	public Set<Neo4jServer> killRandomServersExcept(int n, Set<Neo4jServer> exclusions) {
+		List<Neo4jServer> chosenServers = chooseRandomServers(n, exclusions);
+
+		return doWithServers(chosenServers, server -> {
+			Neo4jContainer<?> container = unwrap(server);
+
+			container.getDockerClient().killContainerCmd(container.getContainerId()).exec();
+
+			try {
+				waitUntilContainerIsKilled(container);
 			} catch (TimeoutException e) {
 				throw new RuntimeException(e);
 			}
@@ -275,6 +295,10 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 				throw new RuntimeException(e);
 			}
 		}
+	}
+
+	private void waitUntilContainerIsKilled(Neo4jContainer<?> container) throws TimeoutException {
+		waitUntilContainerIsStopped(container);
 	}
 
 	private void waitUntilContainerIsStarted(Neo4jContainer<?> container) throws TimeoutException {
