@@ -163,12 +163,14 @@ final class ClusterFactory {
 
 		String numberOfCoreServers = Integer.toString(configuration.getNumberOfCoreServers());
 
-		return newContainerWithCommonConfig(portAndAlias, network)
+		Neo4jContainer<?> coreContainer = newContainerWithCommonConfig(portAndAlias, network)
 			.withNeo4jConfig("dbms.mode", "CORE")
 			.withNeo4jConfig("causal_clustering.initial_discovery_members", initialDiscoveryMembers)
 			.withNeo4jConfig("causal_clustering.minimum_core_cluster_size_at_formation", numberOfCoreServers)
 			.withNeo4jConfig("causal_clustering.minimum_core_cluster_size_at_runtime", numberOfCoreServers)
 			.withStartupTimeout(configuration.getStartupTimeout());
+
+		return configuration.applyCoreModifier(coreContainer);
 	}
 
 	private Neo4jContainer<?> configureContainerForReplicaServerOn(
@@ -187,7 +189,8 @@ final class ClusterFactory {
 			readReplicaContainer = readReplicaContainer
 				.withNeo4jConfig("causal_clustering.discovery_members", initialDiscoveryMembers);
 		}
-		return readReplicaContainer;
+
+		return configuration.applyReadReplicaModifier(readReplicaContainer);
 	}
 
 	private Neo4jContainer<?> newContainerWithCommonConfig(Map.Entry<Integer, String> portAndAlias, Network network) {

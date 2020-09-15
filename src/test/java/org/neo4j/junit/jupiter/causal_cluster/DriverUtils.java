@@ -207,6 +207,7 @@ final class DriverUtils {
 	}
 
 	static void verifyConnectivity(Collection<String> clusterUris) {
+		assertThat(clusterUris.size()).isGreaterThanOrEqualTo(1);
 		for (String clusterUri : clusterUris) {
 			verifyConnectivity(URI.create(clusterUri));
 		}

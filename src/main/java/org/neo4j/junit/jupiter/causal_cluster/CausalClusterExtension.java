@@ -18,8 +18,11 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URI;
@@ -28,6 +31,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.extension.BeforeAllCallback;
@@ -36,6 +40,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.TestInstances;
 import org.junit.platform.commons.support.AnnotationSupport;
 import org.junit.platform.commons.support.HierarchyTraversalMode;
+import org.testcontainers.containers.Neo4jContainer;
 
 /**
  * Provides exactly one instance of {@link Neo4jCluster}.
@@ -43,6 +48,8 @@ import org.junit.platform.commons.support.HierarchyTraversalMode;
  * @author Michael J. Simons
  */
 class CausalClusterExtension implements BeforeAllCallback {
+
+	private static final HierarchyTraversalMode TOP_DOWN = HierarchyTraversalMode.TOP_DOWN;
 
 	private static final ExtensionContext.Namespace NAMESPACE = ExtensionContext.Namespace
 		.create(CausalClusterExtension.class);
@@ -66,11 +73,20 @@ class CausalClusterExtension implements BeforeAllCallback {
 	private static final Configuration DEFAULT_CONFIGURATION = new Configuration(DEFAULT_NEO4J_VERSION,
 		DEFAULT_NUMBER_OF_CORE_SERVERS,
 		DEFAULT_NUMBER_OF_READ_REPLICAS, Duration.ofMillis(DEFAULT_STARTUP_TIMEOUT_IN_MILLIS), DEFAULT_PASSWORD,
-		DEFAULT_HEAP_SIZE_IN_MB, DEFAULT_PAGE_CACHE_IN_MB, null);
+		DEFAULT_HEAP_SIZE_IN_MB, DEFAULT_PAGE_CACHE_IN_MB, UnaryOperator.identity(), UnaryOperator.identity(),
+		null);
 
 	public void beforeAll(ExtensionContext context) {
 
-		AnnotationSupport.findAnnotation(context.getRequiredTestClass(), NeedsCausalCluster.class)
+		Class<?> testClass = context.getRequiredTestClass();
+		Object testInstance = context.getTestInstances().map(TestInstances::getInnermostInstance).orElse(null);
+
+		UnaryOperator<Neo4jContainer<?>> coreModifier = findContainerModifier(testClass, testInstance,
+			CoreModifier.class);
+		UnaryOperator<Neo4jContainer<?>> readReplicaModifier = findContainerModifier(testClass, testInstance,
+			ReadReplicaModifier.class);
+
+		AnnotationSupport.findAnnotation(testClass, NeedsCausalCluster.class)
 			.ifPresent(annotation -> {
 				final ExtensionContext.Store store = context.getStore(NAMESPACE);
 
@@ -80,11 +96,43 @@ class CausalClusterExtension implements BeforeAllCallback {
 					.withNumberOfReadReplicas(annotation.numberOfReadReplicas())
 					.withStartupTimeout(Duration.ofMillis(annotation.startupTimeOutInMillis()))
 					.withPassword(annotation.password())
+					.withCoreModifier(coreModifier)
+					.withReadReplicaModifier(readReplicaModifier)
 					.withCustomImageName(getImageName(annotation));
 				store.put(KEY_CONFIG, configuration);
 
-				injectFields(context, context.getTestInstances().map(TestInstances::getInnermostInstance).orElse(null));
+				injectFields(context, testInstance);
 			});
+	}
+
+	private UnaryOperator<Neo4jContainer<?>> findContainerModifier(Class<?> requiredTestClass, Object testInstance,
+		Class<? extends Annotation> annotationType) {
+
+		final Predicate<Method> methodFilter = testInstance == null ?
+			method -> Modifier.isStatic(method.getModifiers())
+			: method -> true;
+
+		return AnnotationSupport.findAnnotatedMethods(requiredTestClass, annotationType, TOP_DOWN).stream()
+			.filter(methodFilter)
+			.map(method -> {
+				Parameter[] params = method.getParameters();
+				assertSupportedType(annotationType, "return", method.getReturnType(), Neo4jContainer.class);
+
+				assertSupportedType(annotationType, "parameter", params[0].getType(), Neo4jContainer.class);
+
+				assert params.length == 1;
+
+				method.setAccessible(true);
+
+				return (UnaryOperator<Neo4jContainer<?>>) input -> {
+					try {
+						return (Neo4jContainer<?>) method.invoke(testInstance, input);
+					} catch (Exception e) {
+						throw new RuntimeException(e);
+					}
+				};
+			})
+			.findFirst().orElse(UnaryOperator.identity());
 	}
 
 	private String getImageName(NeedsCausalCluster annotation) {
@@ -95,29 +143,31 @@ class CausalClusterExtension implements BeforeAllCallback {
 
 	private void injectFields(ExtensionContext context, Object testInstance) {
 
+		Class<?> testClass = context.getRequiredTestClass();
 		Predicate<Field> selectedFields = field -> true;
 		if (testInstance == null) {
 			selectedFields = field -> Modifier.isStatic(field.getModifiers());
 		}
 
-		AnnotationSupport.findAnnotatedFields(context.getRequiredTestClass(), CausalCluster.class, selectedFields,
-			HierarchyTraversalMode.TOP_DOWN).forEach(field -> {
-			assertSupportedType(CausalCluster.class, "field", field.getType(), URI_FIELD_SUPPORTED_CLASSES);
-			field.setAccessible(true);
-			try {
-				assertFieldIsNull(CausalCluster.class, testInstance, field);
-				if (Collection.class.isAssignableFrom(field.getType())) {
-					Type collectionType = ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
-					assertSupportedType(CausalCluster.class, "Collection<> field", collectionType,
-						String.class, URI.class);
-					field.set(testInstance, getURIs(collectionType, context));
-				} else {
-					field.set(testInstance, getInjectableValue(field.getType(), context));
+		AnnotationSupport.findAnnotatedFields(testClass, CausalCluster.class, selectedFields, TOP_DOWN).forEach(
+			field -> {
+				assertSupportedType(CausalCluster.class, "field", field.getType(), URI_FIELD_SUPPORTED_CLASSES);
+				field.setAccessible(true);
+				try {
+					assertFieldIsNull(CausalCluster.class, testInstance, field);
+					if (Collection.class.isAssignableFrom(field.getType())) {
+						Type collectionType = ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
+						assertSupportedType(CausalCluster.class, "Collection<> field", collectionType,
+							String.class, URI.class);
+						field.set(testInstance, getURIs(collectionType, context));
+					} else {
+						field.set(testInstance, getInjectableValue(field.getType(), context));
+					}
+				} catch (IllegalAccessException e) {
+					throw new RuntimeException(e);
 				}
-			} catch (IllegalAccessException e) {
-				throw new RuntimeException(e);
 			}
-		});
+		);
 	}
 
 	private static void assertFieldIsNull(Class<?> annotation, Object testInstance, Field field)

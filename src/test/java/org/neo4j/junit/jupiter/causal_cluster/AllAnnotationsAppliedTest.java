@@ -18,8 +18,14 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import org.junit.platform.commons.util.ReflectionUtils;
+import org.testcontainers.containers.Neo4jContainer;
+import org.testcontainers.utility.MountableFile;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -28,11 +34,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.junit.jupiter.api.Test;
-import org.junit.platform.commons.util.ReflectionUtils;
-import org.testcontainers.containers.Neo4jContainer;
+import static org.assertj.core.api.Assertions.assertThat;
 
-@NeedsCausalCluster
+@NeedsCausalCluster(numberOfReadReplicas = 1)
 class AllAnnotationsAppliedTest {
 
 	@CausalCluster
@@ -56,6 +60,48 @@ class AllAnnotationsAppliedTest {
 	@CausalCluster
 	static Neo4jCluster cluster;
 
+	private static final String coreMessage = "I am a core hear me roar";
+	private static final MountableFile coreScript = MountableFile
+		.forHostPath(createTemporaryBashScript(String.format("echo '%s'\n", coreMessage)).getAbsolutePath());
+
+	/**
+	 * This approach can be used to do things like modify neo4j configuration or add a plugin.
+	 * In this case we're using the EXTENSION_SCRIPT functionality of the docker container because it's easier and
+	 * quicker to test than adding a plugin or modifying neo4j configuration.
+	 *
+	 * @param input a not-yet-started Neo4jContainer object configured for the cluster
+	 * @return a modified Neo4jContainer object
+	 */
+	@CoreModifier
+	static Neo4jContainer<?> coreModifier(Neo4jContainer<?> input) {
+		String extensionScriptPath = "/extension.sh";
+
+		return input
+			.withCopyFileToContainer(coreScript, extensionScriptPath)
+			.withEnv("EXTENSION_SCRIPT", extensionScriptPath);
+	}
+
+	private static final String rrMessage = "I am a read replica hear me roar";
+	private static final MountableFile rrScript = MountableFile
+		.forHostPath(createTemporaryBashScript(String.format("echo '%s'\n", rrMessage)).getAbsolutePath());
+
+	/**
+	 * This approach can be used to do things like modify neo4j configuration or add a plugin.
+	 * In this case we're using the EXTENSION_SCRIPT functionality of the docker container because it's easier and
+	 * quicker to test than adding a plugin or modifying neo4j configuration.
+	 *
+	 * @param input a not-yet-started Neo4jContainer object configured for the cluster
+	 * @return a modified Neo4jContainer object
+	 */
+	@ReadReplicaModifier
+	static Neo4jContainer<?> rrModifier(Neo4jContainer<?> input) {
+		String extensionScriptPath = "/extension.sh";
+
+		return input
+			.withCopyFileToContainer(rrScript, extensionScriptPath)
+			.withEnv("EXTENSION_SCRIPT", extensionScriptPath);
+	}
+
 	@Test
 	void nothingIsNull() {
 
@@ -75,25 +121,27 @@ class AllAnnotationsAppliedTest {
 			.containsExactlyInAnyOrderElementsOf(clusterUriCollectionOfURIs);
 
 		Set<Neo4jServer> allServers = cluster.getAllServers();
-		assertThat(allServers).hasSize(3);
+		assertThat(allServers).hasSize(4);
 
-		List<URI> allUris = allServers.stream().map(Neo4jServer::getURI).collect(Collectors.toList());
-		assertThat(allUris).hasSize(3);
-		assertThat(allUris).containsExactlyInAnyOrderElementsOf(clusterUriCollectionOfURIs);
+		Set<Neo4jServer> allCoreServers = cluster.getAllServersOfType(Neo4jServer.Type.CORE_SERVER);
+		assertThat(allCoreServers).hasSize(3);
 
+		List<URI> allCoreUris = allCoreServers.stream().map(Neo4jServer::getURI).collect(Collectors.toList());
+		assertThat(allCoreUris).hasSize(3);
+		assertThat(allCoreUris).containsExactlyInAnyOrderElementsOf(clusterUriCollectionOfURIs);
 	}
 
 	@Test
 	void serverComparisonTest() throws URISyntaxException, IllegalAccessException {
 		// Get the container. 🤠
 		Field field = ReflectionUtils
-			.findFields(DefaultNeo4jServer.class, f -> "container" .equals(f.getName()),
+			.findFields(DefaultNeo4jServer.class, f -> "container".equals(f.getName()),
 				ReflectionUtils.HierarchyTraversalMode.TOP_DOWN).get(0);
 		field.setAccessible(true);
 
 		// check that equality & hash code implementation doesn't mess up if we try adding the same servers to a set repeatedly
 		Set<Neo4jServer> allServers = cluster.getAllServers();
-		assertThat(allServers).hasSize(3);
+		assertThat(allServers).hasSize(4);
 
 		for (Neo4jServer server : allServers) {
 
@@ -105,7 +153,7 @@ class AllAnnotationsAppliedTest {
 
 			allServers.add(newServer);
 		}
-		assertThat(allServers).hasSize(3);
+		assertThat(allServers).hasSize(4);
 	}
 
 	@Test
@@ -159,4 +207,40 @@ class AllAnnotationsAppliedTest {
 		DriverUtils.verifyConnectivity(clusterUriListOfStrings);
 	}
 
+	@Test
+	void verifyConnectivityReadReplica() {
+		// Verify connectivity
+		List<String> readReplicaAddresses = cluster.getAllServersOfType(Neo4jServer.Type.REPLICA_SERVER)
+			.stream()
+			.map(s -> s.getDirectBoltUri().toString())
+			.collect(Collectors.toList());
+		DriverUtils.verifyConnectivity(readReplicaAddresses);
+	}
+
+	@Test
+	void verifyContainerModifiers() {
+		// Verify connectivity
+
+		Set<Neo4jServer> cores = cluster.getAllServersOfType(Neo4jServer.Type.CORE_SERVER);
+		assertThat(cores).hasSize(3);
+		cores.forEach(s -> assertThat(s.getContainerLogs()).contains(coreMessage));
+
+		Set<Neo4jServer> readReplicas = cluster.getAllServersOfType(Neo4jServer.Type.REPLICA_SERVER);
+		assertThat(readReplicas).hasSize(1);
+		readReplicas.forEach(s -> assertThat(s.getContainerLogs()).contains(rrMessage));
+	}
+
+	private static File createTemporaryBashScript(final String bash) {
+		try {
+			File f = File.createTempFile("extension", ".sh");
+
+			try (FileOutputStream out = new FileOutputStream(f)) {
+
+				out.write(bash.getBytes());
+			}
+			return f;
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
 }

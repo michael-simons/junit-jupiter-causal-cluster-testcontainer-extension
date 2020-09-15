@@ -335,7 +335,7 @@
 						</goals>
 						<configuration>
 							<rules>
-								<DependencyConvergence />
+								<DependencyConvergence/>
 								<requireMavenVersion>
 									<version>${maven.version}</version>
 								</requireMavenVersion>
