@@ -58,7 +58,7 @@ public interface Neo4jCluster {
 	 * @return All URIs into this cluster (only core servers included)
 	 */
 	default Collection<URI> getURIs() {
-		return getAllServers().stream().filter(s -> s.getType() == Type.CORE_SERVER).map(Neo4jServer::getURI)
+		return getAllServersOfType(Type.CORE_SERVER).stream().map(Neo4jServer::getURI)
 			.collect(Collectors.toList());
 	}
 
@@ -66,6 +66,13 @@ public interface Neo4jCluster {
 	 * @return The Neo4j servers contained by this cluster.
 	 */
 	Set<Neo4jServer> getAllServers();
+
+	/**
+	 * @return The Neo4j servers contained by this cluster that match the provided type.
+	 */
+	default Set<Neo4jServer> getAllServersOfType(Neo4jServer.Type type) {
+		return getAllServers().stream().filter(s -> s.getType() == type).collect(Collectors.toSet());
+	}
 
 	/**
 	 * Retrieves all the servers of that cluster except the given exclusions.
@@ -218,7 +225,6 @@ public interface Neo4jCluster {
 
 	void waitForBoltOnAll(Set<Neo4jServer> servers, Duration timeout)
 		throws Neo4jTimeoutException;
-
 
 	/**
 	 * Thrown in case of time outs when dealing with the cluster or its servers.

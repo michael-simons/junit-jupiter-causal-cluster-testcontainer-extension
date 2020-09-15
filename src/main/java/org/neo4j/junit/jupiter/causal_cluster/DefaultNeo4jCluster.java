@@ -116,8 +116,10 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 				.exec();
 
 			try {
-				consumer.waitUntil(frame -> frame.getUtf8String().contains(NEO4J_STOPPED_MESSAGE), timeoutSeconds,
-						TimeUnit.SECONDS);
+				consumer.waitUntil(
+					frame -> frame.getUtf8String().contains(NEO4J_STOPPED_MESSAGE),
+					timeoutSeconds, TimeUnit.SECONDS
+				);
 				waitUntilContainerIsStopped(container);
 			} catch (TimeoutException e) {
 				throw new RuntimeException(e);
