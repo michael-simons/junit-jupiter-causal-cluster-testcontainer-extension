@@ -18,7 +18,14 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
+import com.github.dockerjava.api.DockerClient;
+
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.testcontainers.containers.Neo4jContainer;
+
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -29,8 +36,6 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import org.testcontainers.containers.Neo4jContainer;
 
 /**
  * @author Andrew Jefferson
@@ -104,10 +109,17 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 
 	private <T> T retrieveLogFile(LogFile logFile, long offset, Function<Stream<String>, T> handler) {
 		try {
-			Path tempFile = Files.createTempFile(logFile.name, ".log");
-			container.copyFileFromContainer("/logs/" + logFile.name, tempFile.toAbsolutePath().toString());
-			try (Stream<String> lines = Files.lines(tempFile)) {
-				return handler.apply(lines.skip(offset));
+			Path tempFile = null;
+			try {
+				tempFile = Files.createTempFile(logFile.name, ".log");
+				copyFileFromContainer(container, "/logs/" + logFile.name, tempFile.toAbsolutePath().toString());
+				try (Stream<String> lines = Files.lines(tempFile)) {
+					return handler.apply(lines.skip(offset));
+				}
+			} finally {
+				if (tempFile != null) {
+					Files.deleteIfExists(tempFile);
+				}
 			}
 		} catch (IOException e) {
 			throw new RuntimeException(e);
@@ -183,5 +195,32 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 			", externalURI=" + externalURI +
 			", type=" + type +
 			'}';
+	}
+
+	/**
+	 * Copies a file which resides inside the container to user defined directory
+	 * N.b. The {@link org.testcontainers.containers.ContainerState} method of the same name throws an error when run
+	 * against a stopped container - but it is in fact possible to copy a file from a stopped container.
+	 *
+	 * @param containerPath   path to file which is copied from container
+	 * @param destinationPath destination path to which file is copied with file name
+	 * @throws IOException if there's an issue communicating with Docker or receiving entry from TarArchiveInputStream
+	 */
+	private static void copyFileFromContainer(Neo4jContainer<?> container, String containerPath, String destinationPath)
+		throws IOException {
+		try (
+			DockerClient dockerClient = container.getDockerClient();
+			InputStream inputStream = dockerClient
+				.copyArchiveFromContainerCmd(container.getContainerId(), containerPath).exec();
+			TarArchiveInputStream tarInputStream = new TarArchiveInputStream(inputStream);
+			FileOutputStream output = new FileOutputStream(destinationPath);
+		) {
+			tarInputStream.getNextTarEntry();
+			byte[] buffer = new byte[8 * 1024];
+			int len;
+			while ((len = inputStream.read(buffer)) > 0) {
+				output.write(buffer, 0, len);
+			}
+		}
 	}
 }

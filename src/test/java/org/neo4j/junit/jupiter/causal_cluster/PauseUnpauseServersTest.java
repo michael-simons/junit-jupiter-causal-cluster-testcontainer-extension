@@ -74,6 +74,9 @@ class PauseUnpauseServersTest {
 		} else {
 			log.info(() -> "Unpausing server after " + Duration.ofMillis(pauseMilliseconds).plus(timeRemaining.abs()));
 		}
+		// check that we can still read log files even though the container is stopped
+		assertThat(paused).allSatisfy(s -> assertThat(s.getDebugLog()).isNotEmpty());
+		assertThat(paused).allSatisfy(s -> assertThat(s.getQueryLog()).isNotEmpty());
 
 		// when
 		Set<Neo4jServer> unpaused = cluster.unpauseServers(paused);
@@ -108,6 +111,10 @@ class PauseUnpauseServersTest {
 		// then
 		assertThatThrownBy(() -> DriverUtils.verifyAnyServersHaveConnectivity(cluster))
 			.satisfies(DriverUtils::hasSuppressedNeo4jException);
+
+		// check that we can still read log files even though the container is stopped
+		assertThat(pausedServers).allSatisfy(s -> assertThat(s.getDebugLog()).isNotEmpty());
+		assertThat(pausedServers).allSatisfy(s -> assertThat(s.getQueryLog()).isNotEmpty());
 
 		// when
 		Set<Neo4jServer> unpaused = cluster.unpauseServers(pausedServers);

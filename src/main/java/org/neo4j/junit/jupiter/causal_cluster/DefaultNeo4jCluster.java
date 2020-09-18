@@ -18,6 +18,7 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ import org.testcontainers.containers.output.OutputFrame;
 import org.testcontainers.containers.output.WaitingConsumer;
 import org.testcontainers.containers.wait.strategy.WaitStrategy;
 
+import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.model.ContainerNetwork;
 
 /**
@@ -120,17 +122,18 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 			container.followOutput(consumer, OutputFrame.OutputType.STDOUT);
 
 			int timeoutSeconds = Math.toIntExact(NEO4J_CONTAINER_STOP_TIMEOUT.toMillis() / 1000);
-			container.getDockerClient().stopContainerCmd(container.getContainerId())
-				.withTimeout(timeoutSeconds)
-				.exec();
 
-			try {
+			try (DockerClient dockerClient = container.getDockerClient()) {
+				dockerClient.stopContainerCmd(container.getContainerId())
+					.withTimeout(timeoutSeconds)
+					.exec();
+
 				consumer.waitUntil(
 					frame -> frame.getUtf8String().contains(NEO4J_STOPPED_MESSAGE),
 					timeoutSeconds, TimeUnit.SECONDS
 				);
 				waitUntilContainerIsStopped(container);
-			} catch (TimeoutException e) {
+			} catch (TimeoutException | IOException e) {
 				throw new RuntimeException(e);
 			}
 
@@ -150,11 +153,10 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 		return doWithServers(chosenServers, server -> {
 			Neo4jContainer<?> container = unwrap(server);
 
-			container.getDockerClient().killContainerCmd(container.getContainerId()).exec();
-
-			try {
+			try (DockerClient dockerClient = container.getDockerClient()) {
+				dockerClient.killContainerCmd(container.getContainerId()).exec();
 				waitUntilContainerIsKilled(container);
-			} catch (TimeoutException e) {
+			} catch (TimeoutException | IOException e) {
 				throw new RuntimeException(e);
 			}
 
@@ -183,11 +185,10 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 			WaitStrategy ws = WaitForLogMessageAfter
 				.waitForLogMessageAfterRestart(NEO4J_CONTAINER_START_MESSAGE, server);
 
-			container.getDockerClient().startContainerCmd(container.getContainerId()).exec();
-
-			try {
+			try (DockerClient dockerClient = container.getDockerClient()) {
+				dockerClient.startContainerCmd(container.getContainerId()).exec();
 				waitUntilContainerIsStarted(container);
-			} catch (TimeoutException e) {
+			} catch (TimeoutException | IOException e) {
 				throw new RuntimeException(e);
 			}
 
@@ -209,7 +210,11 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 
 		return doWithServers(chosenServers, server -> {
 			Neo4jContainer<?> container = unwrap(server);
-			container.getDockerClient().pauseContainerCmd(container.getContainerId()).exec();
+			try (DockerClient dockerClient = container.getDockerClient()) {
+				dockerClient.pauseContainerCmd(container.getContainerId()).exec();
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
 			return server;
 		}).collect(Collectors.toSet());
 	}
@@ -218,7 +223,11 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 	public Set<Neo4jServer> unpauseServers(Set<Neo4jServer> servers) {
 		return doWithServers(servers, server -> {
 			Neo4jContainer<?> container = unwrap(server);
-			container.getDockerClient().unpauseContainerCmd(container.getContainerId()).exec();
+			try (DockerClient dockerClient = container.getDockerClient()) {
+				dockerClient.unpauseContainerCmd(container.getContainerId()).exec();
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
 			return server;
 		}).collect(Collectors.toSet());
 	}
@@ -234,8 +243,12 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 
 		return doWithServers(chosenServers, server -> {
 			Neo4jContainer<?> container = unwrap(server);
-			container.getDockerClient().disconnectFromNetworkCmd().withContainerId(container.getContainerId())
-				.withNetworkId(onNetwork.getId()).withForce(true).exec();
+			try (DockerClient dockerClient = container.getDockerClient()) {
+				dockerClient.disconnectFromNetworkCmd().withContainerId(container.getContainerId())
+					.withNetworkId(onNetwork.getId()).withForce(true).exec();
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
 			return server;
 		}).collect(Collectors.toSet());
 	}
@@ -244,9 +257,15 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 	public Set<Neo4jServer> unisolateServers(Set<Neo4jServer> servers) {
 		return doWithServers(servers, server -> {
 			Neo4jContainer<?> container = unwrap(server);
-			container.getDockerClient().connectToNetworkCmd().withContainerId(container.getContainerId())
-				.withNetworkId(onNetwork.getId()).withContainerNetwork(
-				new ContainerNetwork().withAliases(container.getNetworkAliases())).exec();
+			try (DockerClient dockerClient = container.getDockerClient()) {
+				dockerClient.connectToNetworkCmd()
+					.withContainerId(container.getContainerId())
+					.withNetworkId(onNetwork.getId())
+					.withContainerNetwork(new ContainerNetwork().withAliases(container.getNetworkAliases()))
+					.exec();
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
 			return server;
 		}).collect(Collectors.toSet());
 	}

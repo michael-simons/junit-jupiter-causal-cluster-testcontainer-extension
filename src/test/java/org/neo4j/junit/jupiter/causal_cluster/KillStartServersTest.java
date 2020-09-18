@@ -105,6 +105,10 @@ class KillStartServersTest {
 		assertThatThrownBy(() -> DriverUtils.verifyAnyServersHaveConnectivity(cluster))
 			.satisfies(DriverUtils::hasSuppressedNeo4jException);
 
+		// check that we can still read log files even though the container is stopped
+		assertThat(killedServers).allSatisfy(s -> assertThat(s.getDebugLog()).isNotEmpty());
+		assertThat(killedServers).allSatisfy(s -> assertThat(s.getQueryLog()).isNotEmpty());
+
 		// when
 		cluster.startServers(killedServers);
 		cluster.waitForBoltOnAll(killedServers, Duration.ofMinutes(3));

@@ -96,11 +96,11 @@ class IsolateUnisolateServersTest {
 		});
 
 		if (stopMilliseconds > 10000) {
-			assertThat(isolatedServer.getDebugLogSince(logPositionBefore))
+			assertThat(isolatedServer.getDebugLogFrom(logPositionBefore))
 				.contains(NODE_UNREACHABLE_MESSAGE)
 				.contains(CLUSTER_JOINED_MESSAGE);
 		} else {
-			assertThat(isolatedServer.getDebugLogSince(logPositionBefore))
+			assertThat(isolatedServer.getDebugLogFrom(logPositionBefore))
 				.doesNotContain(NODE_UNREACHABLE_MESSAGE)
 				.doesNotContain(CLUSTER_JOINED_MESSAGE);
 		}
