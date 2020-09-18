@@ -20,7 +20,6 @@ package org.neo4j.junit.jupiter.causal_cluster;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
@@ -108,13 +107,12 @@ class CausalClusterExtension implements BeforeAllCallback {
 	private UnaryOperator<Neo4jContainer<?>> findContainerModifier(Class<?> requiredTestClass, Object testInstance,
 		Class<? extends Annotation> annotationType) {
 
-		final Predicate<Method> methodFilter = testInstance == null ?
-			method -> Modifier.isStatic(method.getModifiers())
-			: method -> true;
-
 		return AnnotationSupport.findAnnotatedMethods(requiredTestClass, annotationType, TOP_DOWN).stream()
-			.filter(methodFilter)
 			.map(method -> {
+				if (testInstance == null && !Modifier.isStatic(method.getModifiers())) {
+					throw new IllegalArgumentException(
+						"Instance methods are not supported for @" + annotationType.getSimpleName());
+				}
 				Parameter[] params = method.getParameters();
 				assertSupportedType(annotationType, "return", method.getReturnType(), Neo4jContainer.class);
 

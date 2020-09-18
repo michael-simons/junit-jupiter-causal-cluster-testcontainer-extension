@@ -28,7 +28,6 @@ import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-import org.junit.Assume;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,14 +35,24 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.commons.logging.Logger;
 import org.junit.platform.commons.logging.LoggerFactory;
+import org.testcontainers.containers.Neo4jContainer;
 
 @NeedsCausalCluster
-class PauseUnpauseServersTest {
+class IsolateUnisolateServersTest {
+
+	private final static String NODE_UNREACHABLE_MESSAGE = "Marking node(s) as UNREACHABLE";
+	private final static String CLUSTER_JOINED_MESSAGE = "ClusterJoiningActor] Join successful, exiting";
+
+	private final Logger log = LoggerFactory.getLogger(this.getClass());
 
 	@CausalCluster
 	static Neo4jCluster cluster;
 
-	private final Logger log = LoggerFactory.getLogger(this.getClass());
+	@CoreModifier
+	static Neo4jContainer configure(Neo4jContainer core) {
+		return core.withNeo4jConfig("dbms.logs.debug.level", "DEBUG")
+			.withNeo4jConfig("causal_clustering.middleware.logging.level", "DEBUG");
+	}
 
 	@BeforeEach
 	void before() throws Neo4jCluster.Neo4jTimeoutException {
@@ -60,73 +69,60 @@ class PauseUnpauseServersTest {
 
 	@ParameterizedTest()
 	@ValueSource(ints = { 1, 35000 })
-	void pauseOneTest(int pauseMilliseconds) throws Exception {
+	void isolateOneTest(int stopMilliseconds) throws Exception {
+
 		// given
-		Set<Neo4jServer> paused = cluster.pauseRandomServers(1);
-		Instant deadline = Instant.now().plus(Duration.ofMillis(pauseMilliseconds));
+		Set<Neo4jServer> isolated = cluster.isolateRandomServers(1);
+		Instant deadline = Instant.now().plus(Duration.ofMillis(stopMilliseconds));
 
-		// then
-		DriverUtils.verifyAllServersHaveConnectivity(cluster.getAllServersExcept(paused));
-
-		Duration timeRemaining = Duration.between(Instant.now(), deadline);
-		if (!timeRemaining.isNegative()) {
-			Thread.sleep(timeRemaining.toMillis());
-		} else {
-			log.info(() -> "Unpausing server after " + Duration.ofMillis(pauseMilliseconds).plus(timeRemaining.abs()));
-		}
+		Neo4jServer isolatedServer = isolated.stream().findFirst().get();
+		long logPositionBefore = isolatedServer.getDebugLogPosition();
 
 		// when
-		Set<Neo4jServer> unpaused = cluster.unpauseServers(paused);
-		cluster.waitForBoltOnAll(unpaused, Duration.ofMinutes(1));
-
-		// then
-		assertThat(unpaused).containsExactlyInAnyOrderElementsOf(paused);
-		verifyClusterResumedSuccessfully();
-	}
-
-	@ParameterizedTest()
-	@ValueSource(ints = { 1, 35000 })
-	void pauseAllTest(int pauseMilliseconds) throws Exception {
-
-		// ignore this for Neo4j versions below 4.2 - it will fail
-		int[] neo4jVersion = DriverUtils.getNeo4jVersion(cluster);
-		Assume.assumeTrue(neo4jVersion[0] >= 4);
-		Assume.assumeTrue(neo4jVersion[1] >= 2);
-
-		// given
-		// I stop all the servers
-		Set<Neo4jServer> pausedServers = cluster.pauseRandomServers(cluster.getAllServers().size());
-		Instant deadline = Instant.now().plus(Duration.ofMillis(pauseMilliseconds));
-
 		Duration timeRemaining = Duration.between(Instant.now(), deadline);
 		if (!timeRemaining.isNegative()) {
 			Thread.sleep(timeRemaining.toMillis());
 		} else {
-			log.info(() -> "Unpausing server after " + Duration.ofMillis(pauseMilliseconds).plus(timeRemaining.abs()));
+			log.info(() -> "Attaching server after " + Duration.ofMillis(stopMilliseconds).plus(timeRemaining.abs()));
 		}
+
+		Set<Neo4jServer> unisolated = cluster.unisolateServers(isolated);
+		cluster.waitForBoltOnAll(unisolated, Duration.ofMinutes(1));
+
+		// then
+		assertThat(unisolated).containsExactlyInAnyOrderElementsOf(isolated);
+		DriverUtils.retryOnceWithWaitForConnectivity(cluster, Duration.ofMinutes(2), () -> {
+			DriverUtils.verifyContinuouslyAllServersHaveConnectivity(cluster, Duration.ofMinutes(1));
+		});
+
+		if (stopMilliseconds > 10000) {
+			assertThat(isolatedServer.getDebugLogSince(logPositionBefore))
+				.contains(NODE_UNREACHABLE_MESSAGE)
+				.contains(CLUSTER_JOINED_MESSAGE);
+		} else {
+			assertThat(isolatedServer.getDebugLogSince(logPositionBefore))
+				.doesNotContain(NODE_UNREACHABLE_MESSAGE)
+				.doesNotContain(CLUSTER_JOINED_MESSAGE);
+		}
+	}
+
+	@Test
+	void isolateAllTest() throws Neo4jCluster.Neo4jTimeoutException, TimeoutException {
+
+		// given
+		// I isolate all the servers
+		Set<Neo4jServer> isolated = cluster.isolateRandomServers(cluster.getAllServers().size());
 
 		// then
 		assertThatThrownBy(() -> DriverUtils.verifyAnyServersHaveConnectivity(cluster))
 			.satisfies(DriverUtils::hasSuppressedNeo4jException);
 
 		// when
-		Set<Neo4jServer> unpaused = cluster.unpauseServers(pausedServers);
-		cluster.waitForBoltOnAll(unpaused, Duration.ofMinutes(1));
+		cluster.unisolateServers(isolated);
+		cluster.waitForBoltOnAll(isolated, Duration.ofMinutes(3));
 
 		// then
-		assertThat(unpaused).containsExactlyInAnyOrderElementsOf(pausedServers);
-		verifyClusterResumedSuccessfully();
-
-	}
-
-	private void verifyClusterResumedSuccessfully() throws TimeoutException {
-		// handling recovery from a pause is a bit strange because _immediately_ after the unpause everything functions
-		// as it did before. But then (usually within seconds) the cores realise that various things have timed out and
-		// the cores may then be unusable for a short period while they figure out what's going on.
-
-		DriverUtils.retryOnceWithWaitForConnectivity(cluster, Duration.ofMinutes(5), () -> {
-			DriverUtils.verifyContinuouslyAllServersHaveConnectivity(cluster, Duration.ofMinutes(2));
-		});
+		DriverUtils.verifyEventuallyAllServersHaveConnectivity(cluster, Duration.ofMinutes(5));
 	}
 
 	/**
@@ -134,15 +130,15 @@ class PauseUnpauseServersTest {
 	 * stopped/started/killed and we want to ensure that does not mess with our ideas of server equality.
 	 */
 	@Test
-	void serverComparisonTest() throws Exception {
+	void serverComparisonTest() throws Neo4jCluster.Neo4jTimeoutException, TimeoutException {
 
 		// given
 		Set<Neo4jServer> allServersBefore = cluster.getAllServers();
 		List<Integer> hashCodesBefore = allServersBefore.stream().map(Object::hashCode).collect(Collectors.toList());
 
-		// pause a server
-		Set<Neo4jServer> paused = cluster.pauseRandomServers(1);
-		assertThat(allServersBefore).containsAll(paused);
+		// stop a server
+		Set<Neo4jServer> isolated = cluster.isolateRandomServers(1);
+		assertThat(allServersBefore).containsAll(isolated);
 
 		// check hash codes etc,
 		Set<Neo4jServer> allServersAfter = cluster.getAllServers();
@@ -151,10 +147,9 @@ class PauseUnpauseServersTest {
 		assertThat(hashCodesAfter).containsExactlyInAnyOrderElementsOf(hashCodesBefore);
 
 		// start the server
-		cluster.unpauseServers(paused);
-		cluster.waitForBoltOnAll(paused, Duration.ofMinutes(1));
-
-		verifyClusterResumedSuccessfully();
+		cluster.unisolateServers(isolated);
+		cluster.waitForBoltOnAll(isolated, Duration.ofMinutes(1));
+		DriverUtils.verifyEventuallyAllServersHaveConnectivity(cluster, Duration.ofMinutes(1));
 
 		// then
 		// equality and hash codes have not changed
@@ -163,4 +158,5 @@ class PauseUnpauseServersTest {
 		assertThat(allServersAfter).containsExactlyInAnyOrderElementsOf(allServersBefore);
 		assertThat(hashCodesAfter).containsExactlyInAnyOrderElementsOf(hashCodesBefore);
 	}
+
 }

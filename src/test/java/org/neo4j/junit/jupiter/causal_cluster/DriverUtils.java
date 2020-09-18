@@ -87,6 +87,30 @@ final class DriverUtils {
 			timeout, "Verifying all servers have connectivity");
 	}
 
+	static void retryOnceWithWaitForConnectivity(Neo4jCluster cluster, Duration connectivityTimeout, Runnable fn)
+		throws TimeoutException {
+		retryOnceWithWaitForConnectivity(cluster, connectivityTimeout, fn, true);
+	}
+
+	static void retryOnceWithWaitForConnectivity(Neo4jCluster cluster, Duration connectivityTimeout, Runnable fn,
+		boolean retryOnce)
+		throws TimeoutException {
+
+		// first wait for full connectivity
+		DriverUtils.verifyEventuallyAllServersHaveConnectivity(cluster, connectivityTimeout);
+		try {
+			fn.run();
+		} catch (Exception e) {
+			// if something goes wrong we retry once
+			if (retryOnce) {
+				// TODO: log the suppressed exception
+				retryOnceWithWaitForConnectivity(cluster, connectivityTimeout, fn, false);
+			} else {
+				throw e;
+			}
+		}
+	}
+
 	static int[] getNeo4jVersion(Neo4jCluster cluster) {
 		try (
 			Driver driver = GraphDatabase.driver(cluster.getURI(), neo4jUserToken, SINGLE_CONNECTION_FAIL_FAST_NO_LOGS);

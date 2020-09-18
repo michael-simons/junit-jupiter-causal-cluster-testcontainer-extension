@@ -22,8 +22,13 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Base64;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.testcontainers.containers.Neo4jContainer;
 
@@ -32,6 +37,9 @@ import org.testcontainers.containers.Neo4jContainer;
  * @author Michael J. Simons
  */
 final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
+
+	private final static Function<Stream<String>, String> streamToString = lines -> lines
+		.collect(Collectors.joining("\n"));
 
 	private enum LogFile {
 		DEBUG("debug.log"),
@@ -51,7 +59,8 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 	 */
 	private final Neo4jContainer<?> container;
 	/**
-	 * The external URI under which this server is reachable, not to be confused with the internal URI returned by {@link Neo4jContainer#getBoltUrl()}.
+	 * The external URI under which this server is reachable, not to be confused with the internal URI returned by
+	 * {@link Neo4jContainer#getBoltUrl()}.
 	 */
 	private final URI externalURI;
 	/**
@@ -74,20 +83,33 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 	}
 
 	@Override
-	public String getDebugLog() {
-		return retrieveLogFile(LogFile.DEBUG);
+	public long getDebugLogPosition() {
+		return retrieveLogFile(LogFile.DEBUG, 0, Stream::count);
 	}
 
 	@Override
-	public String getQueryLog() {
-		return retrieveLogFile(LogFile.QUERY);
+	public String getDebugLogFrom(long offset) {
+		return retrieveLogFile(LogFile.DEBUG, offset, streamToString);
 	}
 
-	private String retrieveLogFile(LogFile logFile) {
+	@Override
+	public long getQueryLogPosition() {
+		return retrieveLogFile(LogFile.QUERY, 0, Stream::count);
+	}
 
+	@Override
+	public String getQueryLogFrom(long offset) {
+		return retrieveLogFile(LogFile.QUERY, offset, streamToString);
+	}
+
+	private <T> T retrieveLogFile(LogFile logFile, long offset, Function<Stream<String>, T> handler) {
 		try {
-			return container.execInContainer("cat", "/logs/" + logFile.name).getStdout();
-		} catch (IOException | InterruptedException e) {
+			Path tempFile = Files.createTempFile(logFile.name, ".log");
+			container.copyFileFromContainer("/logs/" + logFile.name, tempFile.toAbsolutePath().toString());
+			try (Stream<String> lines = Files.lines(tempFile)) {
+				return handler.apply(lines.skip(offset));
+			}
+		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
 	}

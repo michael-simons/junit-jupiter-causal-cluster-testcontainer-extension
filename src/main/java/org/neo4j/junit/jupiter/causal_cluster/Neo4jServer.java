@@ -41,12 +41,36 @@ public interface Neo4jServer {
 	/**
 	 * @return The complete Neo4j debug log.
 	 */
-	String getDebugLog();
+	default String getDebugLog() {
+		return getDebugLogFrom(0);
+	}
+
+	/**
+	 * @return The number of lines in the Neo4j debug log.
+	 */
+	long getDebugLogPosition();
+
+	/**
+	 * @return The Neo4j debug log, omitting the first {@code offset} lines.
+	 */
+	String getDebugLogFrom(long offset);
 
 	/**
 	 * @return The query log.
 	 */
-	String getQueryLog();
+	default String getQueryLog() {
+		return getQueryLogFrom(0);
+	}
+
+	/**
+	 * @return The number of lines in the Neo4j debug log.
+	 */
+	long getQueryLogPosition();
+
+	/**
+	 * @return The Neo4j debug log, omitting the first {@code offset} lines.
+	 */
+	String getQueryLogFrom(long offset);
 
 	/**
 	 * @return The complete container logs.
