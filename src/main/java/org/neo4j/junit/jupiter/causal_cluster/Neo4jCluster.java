@@ -39,8 +39,8 @@ public interface Neo4jCluster {
 
 	Duration NEO4J_CONTAINER_START_TIMEOUT = Duration.ofMinutes(3);
 
-	// TODO: respect the relevant environment var that we use to modify this in most places
-	Duration NEO4J_CONTAINER_STOP_TIMEOUT = Duration.ofMinutes(2);
+	Duration NEO4J_CONTAINER_STOP_TIMEOUT = Duration.ofSeconds(
+		Long.parseLong(System.getenv().getOrDefault("NEO4J_SHUTDOWN_TIMEOUT", "120")));
 
 	/**
 	 * This method is guaranteed to return the URI of a core server and never a replica.
@@ -219,6 +219,44 @@ public interface Neo4jCluster {
 	 * @return The unpaused servers
 	 */
 	Set<Neo4jServer> unpauseServers(Set<Neo4jServer> servers);
+
+	/**
+	 * Isolates {@code n} random servers by detaching them from the network.
+	 *
+	 * @param n The number of servers to pause
+	 * @return The paused servers
+	 */
+	Set<Neo4jServer> isolateRandomServers(int n);
+
+	/**
+	 * Isolates {@code n} random servers by detaching them from the network. But not any of the given exclusions.
+	 *
+	 * @param n          The number of servers to isolate
+	 * @param exclusions Servers not to be isolated
+	 * @return The isolated servers
+	 */
+	default Set<Neo4jServer> isolateRandomServersExcept(int n, Neo4jServer... exclusions) {
+		return isolateRandomServersExcept(n,
+			exclusions == null ? Collections.emptySet() : Stream.of(exclusions).collect(Collectors.toSet()));
+	}
+
+	/**
+	 * Isolates {@code n} random servers by detaching them from the network. But not any of the given exclusions.
+	 * Isolated servers cannot talk to anyone, including each other.
+	 *
+	 * @param n          The number of servers to isolate
+	 * @param exclusions Servers not to be isolated
+	 * @return The isolated servers
+	 */
+	Set<Neo4jServer> isolateRandomServersExcept(int n, Set<Neo4jServer> exclusions);
+
+	/**
+	 * Un-isolates the given servers by re-attaching them to the network.
+	 *
+	 * @param servers Servers to un-isolate
+	 * @return The un-isolated servers
+	 */
+	Set<Neo4jServer> unisolateServers(Set<Neo4jServer> servers);
 
 	void waitForLogMessageOnAll(Set<Neo4jServer> servers, String message, Duration timeout)
 		throws Neo4jTimeoutException;

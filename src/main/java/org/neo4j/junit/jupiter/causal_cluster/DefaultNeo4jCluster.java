@@ -39,10 +39,13 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import org.testcontainers.containers.Neo4jContainer;
+import org.testcontainers.containers.Network;
 import org.testcontainers.containers.SocatContainer;
 import org.testcontainers.containers.output.OutputFrame;
 import org.testcontainers.containers.output.WaitingConsumer;
 import org.testcontainers.containers.wait.strategy.WaitStrategy;
+
+import com.github.dockerjava.api.model.ContainerNetwork;
 
 /**
  * @author Michael J. Simons
@@ -55,19 +58,25 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 	private final static String NEO4J_STOPPED_MESSAGE = "Stopped.\n";
 
 	private final SocatContainer boltProxy;
+	private final Network onNetwork;
 	private final List<DefaultNeo4jServer> clusterServers;
 
-	DefaultNeo4jCluster(SocatContainer boltProxy, List<DefaultNeo4jServer> clusterServers) {
-
-		this(boltProxy, clusterServers, Collections.emptyList());
+	DefaultNeo4jCluster(
+		SocatContainer boltProxy,
+		List<DefaultNeo4jServer> clusterServers,
+		Network onNetwork
+	) {
+		this(boltProxy, clusterServers, Collections.emptyList(), onNetwork);
 	}
 
 	DefaultNeo4jCluster(
-		SocatContainer boltProxy, List<DefaultNeo4jServer> clusterServers,
-		List<DefaultNeo4jServer> readReplicaServers
+		SocatContainer boltProxy,
+		List<DefaultNeo4jServer> clusterServers,
+		List<DefaultNeo4jServer> readReplicaServers,
+		Network network
 	) {
-
 		this.boltProxy = boltProxy;
+		this.onNetwork = network;
 		this.clusterServers = new ArrayList<>(clusterServers.size() + readReplicaServers.size());
 		this.clusterServers.addAll(clusterServers);
 		this.clusterServers.addAll(readReplicaServers);
@@ -210,6 +219,34 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 		return doWithServers(servers, server -> {
 			Neo4jContainer<?> container = unwrap(server);
 			container.getDockerClient().unpauseContainerCmd(container.getContainerId()).exec();
+			return server;
+		}).collect(Collectors.toSet());
+	}
+
+	@Override
+	public Set<Neo4jServer> isolateRandomServers(int n) {
+		return isolateRandomServersExcept(n, Collections.emptySet());
+	}
+
+	@Override
+	public Set<Neo4jServer> isolateRandomServersExcept(int n, Set<Neo4jServer> exclusions) {
+		List<Neo4jServer> chosenServers = chooseRandomServers(n, exclusions);
+
+		return doWithServers(chosenServers, server -> {
+			Neo4jContainer<?> container = unwrap(server);
+			container.getDockerClient().disconnectFromNetworkCmd().withContainerId(container.getContainerId())
+				.withNetworkId(onNetwork.getId()).withForce(true).exec();
+			return server;
+		}).collect(Collectors.toSet());
+	}
+
+	@Override
+	public Set<Neo4jServer> unisolateServers(Set<Neo4jServer> servers) {
+		return doWithServers(servers, server -> {
+			Neo4jContainer<?> container = unwrap(server);
+			container.getDockerClient().connectToNetworkCmd().withContainerId(container.getContainerId())
+				.withNetworkId(onNetwork.getId()).withContainerNetwork(
+				new ContainerNetwork().withAliases(container.getNetworkAliases())).exec();
 			return server;
 		}).collect(Collectors.toSet());
 	}

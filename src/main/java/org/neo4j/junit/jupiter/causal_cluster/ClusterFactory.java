@@ -99,7 +99,7 @@ final class ClusterFactory {
 			.collect(Collectors.toList());
 		startInParallel(readReplicaServers);
 
-		return new DefaultNeo4jCluster(boltProxy, coreServers, readReplicaServers);
+		return new DefaultNeo4jCluster(boltProxy, coreServers, readReplicaServers, onNetwork);
 	}
 
 	private void startInParallel(List<DefaultNeo4jServer> servers) {
