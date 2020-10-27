@@ -28,7 +28,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -54,20 +56,13 @@ import com.github.dockerjava.api.model.ContainerNetwork;
 final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 
 	private final static String NEO4J_CONTAINER_START_MESSAGE = "======== Neo4j";
+	private final static String NEO4J_DATABASES_START_MESSAGE = "Started.";
 	private final static String NEO4J_BOLT_UP_MESSAGE = "Bolt enabled on";
 	private final static String NEO4J_STOPPED_MESSAGE = "Stopped.\n";
 
 	private final SocatContainer boltProxy;
 	private final Network onNetwork;
 	private final List<DefaultNeo4jServer> clusterServers;
-
-	DefaultNeo4jCluster(
-		SocatContainer boltProxy,
-		List<DefaultNeo4jServer> clusterServers,
-		Network onNetwork
-	) {
-		this(boltProxy, clusterServers, Collections.emptyList(), onNetwork);
-	}
 
 	DefaultNeo4jCluster(
 		SocatContainer boltProxy,
@@ -119,7 +114,7 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 			WaitingConsumer consumer = new WaitingConsumer();
 			container.followOutput(consumer, OutputFrame.OutputType.STDOUT);
 
-			int timeoutSeconds = Math.toIntExact(NEO4J_CONTAINER_STOP_TIMEOUT.toMillis() / 1000);
+			int timeoutSeconds = Math.toIntExact(NEO4J_CONTAINER_STOP_TIMEOUT.getSeconds());
 			container.getDockerClient().stopContainerCmd(container.getContainerId())
 				.withTimeout(timeoutSeconds)
 				.exec();
@@ -180,8 +175,12 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 
 			It's up to the user to block until bolt is available if that is their expectation/requirement in tests.
 			 */
-			WaitStrategy ws = WaitForLogMessageAfter
-				.waitForLogMessageAfterRestart(NEO4J_CONTAINER_START_MESSAGE, server);
+			WaitStrategy waitForContainerStartMessage = WaitForLogMessageAfter
+				.waitForLogMessageAfterRestart(NEO4J_CONTAINER_START_MESSAGE, server)
+				.withStartupTimeout(NEO4J_CONTAINER_START_TIMEOUT);
+			WaitStrategy waitForDatabaseManagementStartMessage = WaitForLogMessageAfter
+				.waitForLogMessageAfterRestart(NEO4J_DATABASES_START_MESSAGE, server)
+				.withStartupTimeout(NEO4J_CONTAINER_START_TIMEOUT);
 
 			container.getDockerClient().startContainerCmd(container.getContainerId()).exec();
 
@@ -191,7 +190,8 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 				throw new RuntimeException(e);
 			}
 
-			ws.withStartupTimeout(NEO4J_CONTAINER_START_TIMEOUT).waitUntilReady(container);
+			waitForContainerStartMessage.waitUntilReady(container);
+			waitForDatabaseManagementStartMessage.waitUntilReady(container);
 
 			return server;
 
@@ -399,26 +399,27 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 	 */
 	private static <T> Stream<T> doWithServers(Collection<Neo4jServer> Servers, Function<Neo4jServer, T> fn) {
 
-		// TODO better error handling
-		final CountDownLatch latch = new CountDownLatch(Servers.size());
-
-		// TODO use an explicit Executor instead of dropping it on the shared FJP so we can keep track of better manage tasks.
-		List<CompletableFuture<T>> futures = Servers.stream()
-			.map(server -> CompletableFuture.supplyAsync(() -> {
-				try {
-					return fn.apply(server);
-				} finally {
-					latch.countDown();
-				}
-			})).collect(Collectors.toList());
+		int N = Servers.size();
+		ExecutorService executor = Executors.newFixedThreadPool(N);
 
 		try {
-			latch.await();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		}
 
-		return futures.stream().map(CompletableFuture::join);
+			List<CompletableFuture<T>> futures = Servers.stream()
+				.map(server -> CompletableFuture.supplyAsync(() -> fn.apply(server), executor))
+				.collect(Collectors.toList());
+
+			try {
+				CompletableFuture.allOf(futures.toArray(new CompletableFuture[N]))
+					.get(NEO4J_CONTAINER_STOP_TIMEOUT.getSeconds() * N, TimeUnit.SECONDS);
+			} catch (InterruptedException | ExecutionException | TimeoutException e) {
+				e.printStackTrace();
+				throw new RuntimeException(e);
+			}
+
+			return futures.stream().map(CompletableFuture::join);
+
+		} finally {
+			executor.shutdownNow();
+		}
 	}
 }
