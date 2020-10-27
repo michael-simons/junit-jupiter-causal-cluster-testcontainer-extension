@@ -67,14 +67,6 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 	DefaultNeo4jCluster(
 		SocatContainer boltProxy,
 		List<DefaultNeo4jServer> clusterServers,
-		Network onNetwork
-	) {
-		this(boltProxy, clusterServers, Collections.emptyList(), onNetwork);
-	}
-
-	DefaultNeo4jCluster(
-		SocatContainer boltProxy,
-		List<DefaultNeo4jServer> clusterServers,
 		List<DefaultNeo4jServer> readReplicaServers,
 		Network network
 	) {
@@ -183,10 +175,12 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 
 			It's up to the user to block until bolt is available if that is their expectation/requirement in tests.
 			 */
-			WaitStrategy containerStartMessage = WaitForLogMessageAfter
-				.waitForLogMessageAfterRestart(NEO4J_CONTAINER_START_MESSAGE, server);
-			WaitStrategy databaseManagementStartMessage = WaitForLogMessageAfter
-				.waitForLogMessageAfterRestart(NEO4J_DATABASES_START_MESSAGE, server);
+			WaitStrategy waitForContainerStartMessage = WaitForLogMessageAfter
+				.waitForLogMessageAfterRestart(NEO4J_CONTAINER_START_MESSAGE, server)
+				.withStartupTimeout(NEO4J_CONTAINER_START_TIMEOUT);
+			WaitStrategy waitForDatabaseManagementStartMessage = WaitForLogMessageAfter
+				.waitForLogMessageAfterRestart(NEO4J_DATABASES_START_MESSAGE, server)
+				.withStartupTimeout(NEO4J_CONTAINER_START_TIMEOUT);
 
 			container.getDockerClient().startContainerCmd(container.getContainerId()).exec();
 
@@ -196,8 +190,8 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 				throw new RuntimeException(e);
 			}
 
-			containerStartMessage.withStartupTimeout(NEO4J_CONTAINER_START_TIMEOUT).waitUntilReady(container);
-			databaseManagementStartMessage.withStartupTimeout(NEO4J_CONTAINER_START_TIMEOUT).waitUntilReady(container);
+			waitForContainerStartMessage.waitUntilReady(container);
+			waitForDatabaseManagementStartMessage.waitUntilReady(container);
 
 			return server;
 
