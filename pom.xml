@@ -65,7 +65,7 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<slf4j.version>1.7.30</slf4j.version>
 		<sortpom-maven-plugin.version>2.12.0</sortpom-maven-plugin.version>
-		<testcontainers.version>1.14.3</testcontainers.version>
+		<testcontainers.version>1.15.0</testcontainers.version>
 		<exec-maven-plugin.version>3.0.0</exec-maven-plugin.version>
 	</properties>
 
@@ -143,6 +143,13 @@
 			<groupId>org.testcontainers</groupId>
 			<artifactId>testcontainers</artifactId>
 			<version>${testcontainers.version}</version>
+			<exclusions>
+				<exclusion>
+					<!-- This exclusion is prevents us ending up with two different jna versions on the classpath -->
+					<groupId>org.rnorth.visible-assertions</groupId>
+					<artifactId>visible-assertions</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 	</dependencies>
