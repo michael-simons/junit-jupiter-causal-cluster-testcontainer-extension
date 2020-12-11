@@ -28,6 +28,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -64,6 +65,7 @@ class CausalClusterExtension implements BeforeAllCallback {
 	static final int DEFAULT_PAGE_CACHE_IN_MB = 10;
 
 	private static final String KEY_CONFIG = "config";
+	private static final String CLUSTER_FACTORY_KEY = "neo4j.causalClusterFactory";
 	private static final String KEY = "neo4j.causalCluster";
 
 	private static final Class[] URI_FIELD_SUPPORTED_CLASSES = { URI.class, String.class, Collection.class,
@@ -73,7 +75,7 @@ class CausalClusterExtension implements BeforeAllCallback {
 		DEFAULT_NUMBER_OF_CORE_SERVERS,
 		DEFAULT_NUMBER_OF_READ_REPLICAS, Duration.ofMillis(DEFAULT_STARTUP_TIMEOUT_IN_MILLIS), DEFAULT_PASSWORD,
 		DEFAULT_HEAP_SIZE_IN_MB, DEFAULT_PAGE_CACHE_IN_MB, UnaryOperator.identity(), UnaryOperator.identity(),
-		null);
+		null, false);
 
 	public void beforeAll(ExtensionContext context) {
 
@@ -97,7 +99,8 @@ class CausalClusterExtension implements BeforeAllCallback {
 					.withPassword(annotation.password())
 					.withCoreModifier(coreModifier)
 					.withReadReplicaModifier(readReplicaModifier)
-					.withCustomImageName(getImageName(annotation));
+					.withCustomImageName(getImageName(annotation))
+					.withAllowMultipleClusters(annotation.createMultipleClusters());
 				store.put(KEY_CONFIG, configuration);
 
 				injectFields(context, testInstance);
@@ -147,25 +150,28 @@ class CausalClusterExtension implements BeforeAllCallback {
 			selectedFields = field -> Modifier.isStatic(field.getModifiers());
 		}
 
-		AnnotationSupport.findAnnotatedFields(testClass, CausalCluster.class, selectedFields, TOP_DOWN).forEach(
-			field -> {
-				assertSupportedType(CausalCluster.class, "field", field.getType(), URI_FIELD_SUPPORTED_CLASSES);
-				field.setAccessible(true);
-				try {
-					assertFieldIsNull(CausalCluster.class, testInstance, field);
-					if (Collection.class.isAssignableFrom(field.getType())) {
-						Type collectionType = ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
-						assertSupportedType(CausalCluster.class, "Collection<> field", collectionType,
-							String.class, URI.class);
-						field.set(testInstance, getURIs(collectionType, context));
-					} else {
-						field.set(testInstance, getInjectableValue(field.getType(), context));
+		AnnotationSupport.findAnnotatedFields(testClass, CausalCluster.class, selectedFields, TOP_DOWN).stream()
+			.sorted(Comparator.comparing(Field::getName))
+			.forEach(
+				field -> {
+					assertSupportedType(CausalCluster.class, "field", field.getType(), URI_FIELD_SUPPORTED_CLASSES);
+					field.setAccessible(true);
+					try {
+						assertFieldIsNull(CausalCluster.class, testInstance, field);
+						if (Collection.class.isAssignableFrom(field.getType())) {
+							Type collectionType = ((ParameterizedType) field.getGenericType())
+								.getActualTypeArguments()[0];
+							assertSupportedType(CausalCluster.class, "Collection<> field", collectionType,
+								String.class, URI.class);
+							field.set(testInstance, getURIs(collectionType, context));
+						} else {
+							field.set(testInstance, getInjectableValue(field.getType(), context));
+						}
+					} catch (IllegalAccessException e) {
+						throw new RuntimeException(e);
 					}
-				} catch (IllegalAccessException e) {
-					throw new RuntimeException(e);
 				}
-			}
-		);
+			);
 	}
 
 	private static void assertFieldIsNull(Class<?> annotation, Object testInstance, Field field)
@@ -219,8 +225,12 @@ class CausalClusterExtension implements BeforeAllCallback {
 		Configuration configuration = store
 			.getOrComputeIfAbsent(KEY_CONFIG, key -> DEFAULT_CONFIGURATION, Configuration.class);
 
-		return extensionContext.getStore(NAMESPACE)
-			.getOrComputeIfAbsent(KEY, key -> new ClusterFactory(configuration).createCluster(), Neo4jCluster.class);
+		ClusterFactory clusterFactory = extensionContext.getStore(NAMESPACE)
+			.getOrComputeIfAbsent(CLUSTER_FACTORY_KEY, key -> new ClusterFactory(configuration), ClusterFactory.class);
+
+		return configuration.allowMultipleClusters() ? clusterFactory.createCluster() :
+			extensionContext.getStore(NAMESPACE)
+				.getOrComputeIfAbsent(KEY, key -> clusterFactory.createCluster(), Neo4jCluster.class);
 	}
 
 	private static Object getInjectableValue(Class<?> type, ExtensionContext extensionContext) {

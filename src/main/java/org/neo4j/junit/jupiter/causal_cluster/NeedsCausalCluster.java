@@ -65,4 +65,6 @@ public @interface NeedsCausalCluster {
 	long startupTimeOutInMillis() default CausalClusterExtension.DEFAULT_STARTUP_TIMEOUT_IN_MILLIS;
 
 	String password() default "password";
+
+	boolean createMultipleClusters() default false;
 }
