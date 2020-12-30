@@ -20,16 +20,19 @@ package org.neo4j.junit.jupiter.causal_cluster;
 
 import java.net.URI;
 import java.util.AbstractMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer.Type;
 import org.testcontainers.containers.Neo4jContainer;
 import org.testcontainers.containers.Network;
@@ -41,15 +44,23 @@ import org.testcontainers.containers.SocatContainer;
  * @author Michael J. Simons
  * @author Andrew Jefferson
  */
-final class ClusterFactory {
+public final class ClusterFactory implements ExtensionContext.Store.CloseableResource {
 
 	private static final int DEFAULT_BOLT_PORT = 7687;
 	public static final int MINIMUM_NUMBER_OF_CORE_SERVERS_REQUIRED = 3;
 	public static final int MINIMUM_NUMBER_OF_REPLICA_SERVERS_REQUIRED = 0;
+	public static final int MAXIMUM_NUMBER_OF_SERVERS_ALLOWED = 20;
 
 	private final Configuration configuration;
 
 	private SocatContainer boltProxy;
+
+	private final List<Neo4jCluster> clusters = new LinkedList<>();
+
+	private final AtomicInteger clusterCounter = new AtomicInteger(0);
+
+	// Prepare one shared network for all clusters
+	private final Network onNetwork = Network.newNetwork();
 
 	ClusterFactory(Configuration configuration) {
 		this.configuration = configuration;
@@ -57,6 +68,7 @@ final class ClusterFactory {
 
 	Neo4jCluster createCluster() {
 
+		final int clusterIndex = clusterCounter.getAndIncrement();
 		final int numberOfCoreServers = configuration.getNumberOfCoreServers();
 		final int numberOfReplicaServers = configuration.getNumberOfReadReplicas();
 
@@ -69,37 +81,44 @@ final class ClusterFactory {
 			throw new IllegalArgumentException("A cluster cannot have a negative number of read replicas.");
 		}
 
-		// Prepare one shared network for those containers
-		final Network onNetwork = Network.newNetwork();
+		if (numberOfCoreServers + numberOfReplicaServers > MAXIMUM_NUMBER_OF_SERVERS_ALLOWED) {
+			throw new IllegalArgumentException("A cluster cannot have a more than 20 servers in total");
+		}
 
 		// Setup a naming strategy and the initial discovery members
-		final String withInitialDiscoveryMembers = iterateCoreServers()
+		int clusterPortOffset = clusterIndex * MAXIMUM_NUMBER_OF_SERVERS_ALLOWED;
+		final String withInitialDiscoveryMembers = iterateCoreServers(clusterPortOffset)
 			.map(n -> String.format("%s:5000", n.getValue()))
 			.collect(Collectors.joining(","));
 
 		// Prepare proxy to enter the cluster
 		boltProxy = new SocatContainer().withNetwork(onNetwork);
-		iterateCoreServers().forEach(member -> boltProxy
+		iterateCoreServers(clusterPortOffset).forEach(member -> boltProxy
 			.withTarget(member.getKey(), member.getValue(), DEFAULT_BOLT_PORT));
-		iterateReplicaServers().forEach(member -> boltProxy
+		iterateReplicaServers(clusterPortOffset).forEach(member -> boltProxy
 			.withTarget(member.getKey(), member.getValue(), DEFAULT_BOLT_PORT));
 
 		// Start the proxy so that the exposed ports are available and we can get the mapped ones
 		boltProxy.start();
 
 		// First configure the core server container
-		final List<DefaultNeo4jServer> coreServers = iterateCoreServers()
+		final List<DefaultNeo4jServer> coreServers = iterateCoreServers(clusterPortOffset)
 			.map(createCoreServer(onNetwork, withInitialDiscoveryMembers))
 			.collect(Collectors.toList());
 		startInParallel(coreServers);
 
 		// Then the replicas configure the core server container
-		final List<DefaultNeo4jServer> readReplicaServers = iterateReplicaServers()
+		final List<DefaultNeo4jServer> readReplicaServers = iterateReplicaServers(clusterPortOffset)
 			.map(createReadReplica(onNetwork, withInitialDiscoveryMembers))
 			.collect(Collectors.toList());
 		startInParallel(readReplicaServers);
 
-		return new DefaultNeo4jCluster(boltProxy, coreServers, readReplicaServers, onNetwork);
+		DefaultNeo4jCluster newCluster = new DefaultNeo4jCluster(boltProxy, coreServers, readReplicaServers,
+			onNetwork);
+		synchronized (this) {
+			clusters.add(newCluster);
+		}
+		return newCluster;
 	}
 
 	private void startInParallel(List<DefaultNeo4jServer> servers) {
@@ -117,19 +136,21 @@ final class ClusterFactory {
 		}
 	}
 
-	private Stream<Map.Entry<Integer, String>> iterateCoreServers() {
-		final IntFunction<String> generateInstanceName = i -> String.format("neo4j%d", i);
+	private Stream<Map.Entry<Integer, String>> iterateCoreServers(int clusterOffset) {
+		final IntFunction<String> generateInstanceName = i -> String.format("neo4j%d", i + 1);
 
-		return IntStream.rangeClosed(1, this.configuration.getNumberOfCoreServers())
-			.mapToObj(i -> new AbstractMap.SimpleEntry<>(DEFAULT_BOLT_PORT + i - 1, generateInstanceName.apply(i)));
+		return IntStream.range(0, this.configuration.getNumberOfCoreServers())
+			.map(i -> i + clusterOffset)
+			.mapToObj(i -> new AbstractMap.SimpleEntry<>(DEFAULT_BOLT_PORT + i, generateInstanceName.apply(i)));
 	}
 
-	private Stream<Map.Entry<Integer, String>> iterateReplicaServers() {
-		final IntFunction<String> generateInstanceName = i -> String.format("replica%d", i);
+	private Stream<Map.Entry<Integer, String>> iterateReplicaServers(int clusterOffset) {
+		final IntFunction<String> generateInstanceName = i -> String.format("replica%d", i + 1);
 
-		return IntStream.rangeClosed(1, this.configuration.getNumberOfReadReplicas())
+		return IntStream.range(0, this.configuration.getNumberOfReadReplicas())
+			.map(i -> i + clusterOffset)
 			.mapToObj(
-				i -> new AbstractMap.SimpleEntry<>(DEFAULT_BOLT_PORT + configuration.getNumberOfCoreServers() + i - 1,
+				i -> new AbstractMap.SimpleEntry<>(DEFAULT_BOLT_PORT + configuration.getNumberOfCoreServers() + i,
 					generateInstanceName.apply(i)));
 	}
 
@@ -151,7 +172,8 @@ final class ClusterFactory {
 		return (portAndAlias) -> {
 			Neo4jContainer<?> container = configureContainerForReplicaServerOn(portAndAlias, network,
 				initialDiscoveryMembers);
-			return new DefaultNeo4jServer(container, getNeo4jUri(portAndAlias.getKey()), Neo4jServer.Type.REPLICA_SERVER);
+			return new DefaultNeo4jServer(container, getNeo4jUri(portAndAlias.getKey()),
+				Neo4jServer.Type.REPLICA_SERVER);
 		};
 	}
 
@@ -223,5 +245,10 @@ final class ClusterFactory {
 			boltProxy.getContainerIpAddress(),
 			boltProxy.getMappedPort(boltPort)
 		));
+	}
+
+	@Override
+	public void close() {
+		clusters.forEach(c -> ((DefaultNeo4jCluster) c).close());
 	}
 }
