@@ -18,6 +18,7 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -82,6 +83,15 @@ final class DefaultNeo4jCluster implements Neo4jCluster, CloseableResource {
 
 		boltProxy.close();
 		clusterServers.forEach(DefaultNeo4jServer::close);
+	}
+
+	@Override
+	public URI getBalancedURI() {
+		return URI.create(String.format(
+			"neo4j://%s:%d",
+			boltProxy.getContainerIpAddress(),
+			boltProxy.getMappedPort(ClusterFactory.BALANCED_PORT)
+		));
 	}
 
 	@Override

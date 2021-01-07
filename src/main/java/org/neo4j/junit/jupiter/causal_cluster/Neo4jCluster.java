@@ -63,6 +63,11 @@ public interface Neo4jCluster {
 	}
 
 	/**
+	 * @return A URIs that is load balanced over all members of this cluster
+	 */
+	URI getBalancedURI();
+
+	/**
 	 * @return The Neo4j servers contained by this cluster.
 	 */
 	Set<Neo4jServer> getAllServers();
