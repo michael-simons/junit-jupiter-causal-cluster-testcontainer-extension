@@ -43,11 +43,14 @@ import org.testcontainers.containers.SocatContainer;
  */
 final class ClusterFactory {
 
+	static final int BALANCED_PORT = 8888;
 	private static final int DEFAULT_BOLT_PORT = 7687;
+	private static final String balancedAddress = "neo4j.balanced";
 	public static final int MINIMUM_NUMBER_OF_CORE_SERVERS_REQUIRED = 3;
 	public static final int MINIMUM_NUMBER_OF_REPLICA_SERVERS_REQUIRED = 0;
 
 	private final Configuration configuration;
+
 
 	private SocatContainer boltProxy;
 
@@ -79,6 +82,7 @@ final class ClusterFactory {
 
 		// Prepare proxy to enter the cluster
 		boltProxy = new SocatContainer().withNetwork(onNetwork);
+		boltProxy.withTarget(BALANCED_PORT, balancedAddress, DEFAULT_BOLT_PORT);
 		iterateCoreServers().forEach(member -> boltProxy
 			.withTarget(member.getKey(), member.getValue(), DEFAULT_BOLT_PORT));
 		iterateReplicaServers().forEach(member -> boltProxy
@@ -207,7 +211,7 @@ final class ClusterFactory {
 			.withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
 			.withAdminPassword(configuration.getPassword())
 			.withNetwork(network)
-			.withNetworkAliases(alias)
+			.withNetworkAliases(alias, balancedAddress)
 			.withCreateContainerCmdModifier(cmd -> cmd.withHostName(alias))
 			.withNeo4jConfig("dbms.memory.pagecache.size", configuration.getPagecacheSize() + "M")
 			.withNeo4jConfig("dbms.memory.heap.initial_size", configuration.getInitialHeapSize() + "M")
