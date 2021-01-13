@@ -5,7 +5,7 @@ Michael Simons <michael.simons@neo4j.com>
 :listing-caption: Listing
 :source-highlighter: coderay
 :icons: font
-:latest_version: 2020.0.6
+:latest_version: 2020.0.7
 
 image::https://img.shields.io/maven-central/v/eu.michael-simons.neo4j/junit-jupiter-causal-cluster-testcontainer-extension.svg[Maven Central,link=http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22eu.michael-simons.neo4j%22%20AND%20a%3A%22junit-jupiter-causal-cluster-testcontainer-extension%22]
 
