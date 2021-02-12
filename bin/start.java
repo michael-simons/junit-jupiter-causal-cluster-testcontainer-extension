@@ -53,28 +53,28 @@ public final class start implements Callable<Integer> {
 	@Option(names = {"-h", "--help"}, usageHelp = true, description = "display this help message")
 	boolean usageHelpRequested;
 
-	@Option(names = {"acceptLicense"})
+	@Option(names = {"--accept-license"}, description = "Using a Neo4j Enterprise Docker image will require you to accept the official Enterprise license agreement.")
 	boolean acceptLicense = false;
 
-	@Option(names = "neo4jVersion")
+	@Option(names = "--neo4jVersion", description = "Configure the Neo4j version being used (all released 4.x versions are supported).")
 	private String neo4jVersion = CausalClusterExtension.DEFAULT_NEO4J_VERSION;
 
-	@Option(names = "numberOfCoreServers")
+	@Option(names = "--number-of-core-servers", description = "Configure the number of core servers")
 	private int numberOfCoreServers = CausalClusterExtension.DEFAULT_NUMBER_OF_CORE_SERVERS;
 
-	@Option(names = "numberOfReadReplicas")
+	@Option(names = "--number-of-read-replicas", description = "Configure the number of read replicas")
 	private int numberOfReadReplicas = CausalClusterExtension.DEFAULT_NUMBER_OF_READ_REPLICAS;
 
-	@Option(names = "startupTimeout")
+	@Option(names = "--startup-timeout", description = "How long shall we wait for the cluster to form?")
 	private Duration startupTimeout = Duration.ofMillis(CausalClusterExtension.DEFAULT_STARTUP_TIMEOUT_IN_MILLIS);
 
-	@Option(names = "password")
+	@Option(names = "--password", description = "The server password to configure.")
 	private String password = CausalClusterExtension.DEFAULT_PASSWORD;
 
-	@Option(names = "initialHeapSize")
+	@Option(names = "--initial-heap-size", description = "Initial heap size per server in MB.")
 	private int initialHeapSize = CausalClusterExtension.DEFAULT_HEAP_SIZE_IN_MB;
 
-	@Option(names = "pagecacheSize")
+	@Option(names = "--pagecache-size", description = "Pagecache size per server in MB.")
 	private int pagecacheSize = CausalClusterExtension.DEFAULT_PAGE_CACHE_IN_MB;
 
 	public static void main(String... args) {
@@ -92,7 +92,7 @@ public final class start implements Callable<Integer> {
 
 		if (!acceptLicense) {
 			log.warn("Using a Neo4j Enterprise Docker image will require you to accept the official Enterprise license agreement.");
-			log.warn("Please call this script with `acceptLicense=true`.");
+			log.warn("Please call this script with `--accept-license`.");
 			return CommandLine.ExitCode.USAGE;
 		}
 
