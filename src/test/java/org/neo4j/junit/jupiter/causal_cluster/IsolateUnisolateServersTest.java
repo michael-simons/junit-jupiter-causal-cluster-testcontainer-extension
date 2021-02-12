@@ -67,7 +67,7 @@ class IsolateUnisolateServersTest {
 		DriverUtils.verifyAllServersHaveConnectivity(cluster);
 	}
 
-	@ParameterizedTest()
+	@ParameterizedTest
 	@ValueSource(ints = { 1, 35000 })
 	void isolateOneTest(int stopMilliseconds) throws Exception {
 

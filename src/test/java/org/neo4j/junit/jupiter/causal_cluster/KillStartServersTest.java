@@ -62,7 +62,7 @@ class KillStartServersTest {
 		DriverUtils.verifyAllServersHaveConnectivity(cluster);
 	}
 
-	@ParameterizedTest()
+	@ParameterizedTest
 	@ValueSource(ints = { 1, 35000 })
 	void killOneTest(int killMilliseconds) throws Exception {
 		// given
