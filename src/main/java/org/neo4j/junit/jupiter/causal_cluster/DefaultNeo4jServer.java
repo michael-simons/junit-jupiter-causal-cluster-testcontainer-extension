@@ -30,6 +30,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.testcontainers.containers.Container;
 import org.testcontainers.containers.Neo4jContainer;
 
 /**
@@ -170,6 +171,11 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 	@Override
 	public Type getType() {
 		return type;
+	}
+
+	@Override
+	public Container.ExecResult execInContainer(String... command) throws IOException, InterruptedException {
+		return container.execInContainer(command);
 	}
 
 	Neo4jContainer<?> unwrap() {
