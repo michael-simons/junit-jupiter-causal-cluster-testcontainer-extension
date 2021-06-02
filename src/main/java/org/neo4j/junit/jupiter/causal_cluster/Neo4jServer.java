@@ -18,6 +18,9 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
+import org.testcontainers.containers.Container;
+
+import java.io.IOException;
 import java.net.URI;
 
 /**
@@ -101,4 +104,12 @@ public interface Neo4jServer {
 	 * @return The type of this server.
 	 */
 	Type getType();
+
+	/**
+	 * Run a command inside the Neo4j container, as though using "docker exec".
+	 * @param command to run
+	 * @return the result of execution
+	 * @see org.testcontainers.containers.ContainerState#execInContainer(String...)
+	 */
+	Container.ExecResult execInContainer(String... command) throws IOException, InterruptedException;
 }

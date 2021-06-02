@@ -92,6 +92,21 @@ class CoreAndReadReplicasTest {
 		}
 	}
 
+	@Nested @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+	@NeedsCausalCluster(numberOfReadReplicas = 2, neo4jVersion = "4.2")
+	class With42 {
+
+		@CausalCluster
+		Neo4jCluster cluster;
+
+		@Test
+		void shouldProvideCoreAndReadReplicas() {
+
+			Set<Neo4jServer> servers = cluster.getAllServers();
+			assertCorrectNumberOfCoreAndReadReplicaServers(servers);
+		}
+	}
+
 	static void assertCorrectNumberOfCoreAndReadReplicaServers(Set<Neo4jServer> servers) {
 		assertThat(servers.stream().map(Neo4jServer::getType).distinct())
 			.containsExactlyInAnyOrder(Neo4jServer.Type.CORE_SERVER, Neo4jServer.Type.REPLICA_SERVER);
