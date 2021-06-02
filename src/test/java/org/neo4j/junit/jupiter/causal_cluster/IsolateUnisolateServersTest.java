@@ -68,7 +68,7 @@ class IsolateUnisolateServersTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(ints = { 1, 35000 })
+	@ValueSource(ints = { 1, 65000 })
 	void isolateOneTest(int stopMilliseconds) throws Exception {
 
 		// given
