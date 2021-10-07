@@ -54,6 +54,7 @@ public interface Neo4jServer {
 	long getDebugLogPosition();
 
 	/**
+	 * @param offset the offset to read from
 	 * @return The Neo4j debug log, omitting the first {@code offset} lines.
 	 */
 	String getDebugLogFrom(long offset);
@@ -71,6 +72,7 @@ public interface Neo4jServer {
 	long getQueryLogPosition();
 
 	/**
+	 * @param offset the offset to read from
 	 * @return The Neo4j debug log, omitting the first {@code offset} lines.
 	 */
 	String getQueryLogFrom(long offset);
@@ -110,6 +112,8 @@ public interface Neo4jServer {
 	 * @param command to run
 	 * @return the result of execution
 	 * @see org.testcontainers.containers.ContainerState#execInContainer(String...)
+	 * @throws IOException Just passing those on
+	 * @throws InterruptedException These as well
 	 */
 	Container.ExecResult execInContainer(String... command) throws IOException, InterruptedException;
 }

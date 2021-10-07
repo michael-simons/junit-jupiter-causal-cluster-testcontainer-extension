@@ -73,6 +73,7 @@ public interface Neo4jCluster {
 	Set<Neo4jServer> getAllServers();
 
 	/**
+	 * @param type The type to filter by
 	 * @return The Neo4j servers contained by this cluster that match the provided type.
 	 */
 	default Set<Neo4jServer> getAllServersOfType(Neo4jServer.Type type) {
@@ -103,7 +104,7 @@ public interface Neo4jCluster {
 	 *
 	 * This method sends a SIGTERM. Upon receipt of the signal neo4j will shut down gracefully and the process will
 	 * terminate once neo4j has finished its shutdown tasks such as writing checkpoints to disk and standing down from
-	 * the cluster membership. If the process does not terminate within the {@link NEO4J_CONTAINER_STOP_TIMEOUT} then
+	 * the cluster membership. If the process does not terminate within the {@link #NEO4J_CONTAINER_STOP_TIMEOUT} then
 	 * a SIGKILL is sent and the process is terminated.
 	 *
 	 * @param n The number of servers to stop
@@ -116,7 +117,7 @@ public interface Neo4jCluster {
 	 *
 	 * This method sends a SIGTERM. Upon receipt of the signal neo4j will shut down gracefully and the process will
 	 * terminate once neo4j has finished its shutdown tasks such as writing checkpoints to disk and standing down from
-	 * the cluster membership. If the process does not terminate within the {@link NEO4J_CONTAINER_STOP_TIMEOUT} then
+	 * the cluster membership. If the process does not terminate within the {@link #NEO4J_CONTAINER_STOP_TIMEOUT} then
 	 * a SIGKILL is sent and the process is terminated.
 	 *
 	 * @param n          The number of servers to stop
