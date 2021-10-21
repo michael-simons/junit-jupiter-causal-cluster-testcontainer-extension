@@ -53,7 +53,7 @@ class CausalClusterExtension implements BeforeAllCallback {
 	private static final ExtensionContext.Namespace NAMESPACE = ExtensionContext.Namespace
 		.create(CausalClusterExtension.class);
 
-	static final String DEFAULT_NEO4J_VERSION = "4.2";
+	static final String DEFAULT_NEO4J_VERSION = "4.3";
 	static final int DEFAULT_NUMBER_OF_CORE_SERVERS = 3;
 	static final int DEFAULT_NUMBER_OF_READ_REPLICAS = 0;
 	static final long DEFAULT_STARTUP_TIMEOUT_IN_MILLIS = 5 * 60 * 1_000;

@@ -47,7 +47,7 @@ class ExecTest {
 			// some versions print "neo4j-admin <version>" others just print "<version>"
 			String stdout = result.getStdout().replace("neo4j-admin", "").trim();
 
-			assertThat(stdout).startsWith(neo4jVersion);
+			assertThat(stdout).contains(neo4jVersion);
 			assertThat(result.getStderr()).isEmpty();
 			assertThat(result.getExitCode()).isEqualTo(0);
 		} catch (Exception e) {
