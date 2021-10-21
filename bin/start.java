@@ -19,8 +19,8 @@
  */
 
 //DEPS info.picocli:picocli:4.2.0
-//DEPS eu.michael-simons.neo4j:junit-jupiter-causal-cluster-testcontainer-extension:2020.0.7
-//DEPS org.slf4j:slf4j-simple:1.7.30
+//DEPS eu.michael-simons.neo4j:junit-jupiter-causal-cluster-testcontainer-extension:2021.0.2
+//DEPS org.slf4j:slf4j-simple:1.7.32
 
 package org.neo4j.junit.jupiter.causal_cluster;
 
