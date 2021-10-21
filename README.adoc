@@ -11,7 +11,7 @@ image::https://img.shields.io/maven-central/v/eu.michael-simons.neo4j/junit-jupi
 
 [abstract]
 --
-This is a JUnit Jupiter extension that provides a https://neo4j.com/docs/operations-manual/current/clustering/[Neo4j Causual Cluster] for JUnit based integration tests.
+This is a JUnit Jupiter extension that provides a https://neo4j.com/docs/operations-manual/current/clustering/[Neo4j Causal Cluster] for JUnit based integration tests.
 --
 
 WARNING: This software requires the use of the Neo4j Enterprise Edition via the official enterprise Docker Image.
