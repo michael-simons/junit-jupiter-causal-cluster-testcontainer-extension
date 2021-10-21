@@ -24,7 +24,9 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Base64;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -53,7 +55,7 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 		}
 	}
 
-	private final static String START_TOKEN = "Starting Neo4j.\n";
+	private final static List<String> startingTokens = Arrays.asList("Starting Neo4j.\n", "Starting...\n");
 
 	/**
 	 * The underlying test container instance.
@@ -123,7 +125,11 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 	@Override
 	public String getContainerLogsSinceStart() {
 		String allLogs = container.getLogs();
-		return allLogs.substring(allLogs.lastIndexOf(START_TOKEN));
+		return startingTokens.stream()
+			.filter(startToken -> allLogs.lastIndexOf(startToken) > 0)
+			.map(startToken -> allLogs.substring(allLogs.lastIndexOf(startToken)))
+			.findFirst()
+			.orElse("");
 	}
 
 	@Override
