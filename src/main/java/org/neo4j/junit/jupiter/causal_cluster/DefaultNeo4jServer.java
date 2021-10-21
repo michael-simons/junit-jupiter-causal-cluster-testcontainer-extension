@@ -18,21 +18,22 @@
  */
 package org.neo4j.junit.jupiter.causal_cluster;
 
-import org.testcontainers.containers.Container;
-import org.testcontainers.containers.Neo4jContainer;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import org.testcontainers.containers.Container;
+import org.testcontainers.containers.Neo4jContainer;
 
 /**
  * @author Andrew Jefferson
@@ -54,7 +55,7 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 		}
 	}
 
-	private final static List<String> startingTokens = Stream.of( "Starting Neo4j.\n", "Starting...\n" ).collect( Collectors.toList() );
+	private final static List<String> startingTokens = Arrays.asList("Starting Neo4j.\n", "Starting...\n");
 
 	/**
 	 * The underlying test container instance.
@@ -122,14 +123,13 @@ final class DefaultNeo4jServer implements Neo4jServer, AutoCloseable {
 	}
 
 	@Override
-	public String getContainerLogsSinceStart()
-	{
+	public String getContainerLogsSinceStart() {
 		String allLogs = container.getLogs();
 		return startingTokens.stream()
-							 .filter( startToken -> allLogs.lastIndexOf( startToken ) > 0 )
-							 .map( startToken -> allLogs.substring( allLogs.lastIndexOf( startToken ) ) )
-							 .findFirst()
-							 .orElse( "" );
+			.filter(startToken -> allLogs.lastIndexOf(startToken) > 0)
+			.map(startToken -> allLogs.substring(allLogs.lastIndexOf(startToken)))
+			.findFirst()
+			.orElse("");
 	}
 
 	@Override
