@@ -68,7 +68,7 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<slf4j.version>1.7.36</slf4j.version>
 		<sortpom-maven-plugin.version>3.0.1</sortpom-maven-plugin.version>
-		<testcontainers.version>1.16.3</testcontainers.version>
+		<testcontainers.version>1.17.1</testcontainers.version>
 		<exec-maven-plugin.version>3.0.0</exec-maven-plugin.version>
 	</properties>
 
