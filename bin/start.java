@@ -27,11 +27,15 @@ package org.neo4j.junit.jupiter.causal_cluster;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.impl.SimpleLogger;
+import org.testcontainers.containers.Neo4jContainer;
+
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -77,6 +81,9 @@ public final class start implements Callable<Integer> {
 	@Option(names = "--pagecache-size", description = "Pagecache size per server in MB.")
 	private int pagecacheSize = CausalClusterExtension.DEFAULT_PAGE_CACHE_IN_MB;
 
+	@Option(names = "--core-options", description = "Custom Neo4j options for the core servers.")
+	private Map<String, String> coreOptions = new HashMap<>();
+
 	public static void main(String... args) {
 
 		System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "INFO");
@@ -96,12 +103,22 @@ public final class start implements Callable<Integer> {
 			return CommandLine.ExitCode.USAGE;
 		}
 
+		UnaryOperator<Neo4jContainer<?>> coreModifier;
+		if (coreOptions.isEmpty()) {
+			coreModifier = UnaryOperator.identity();
+		} else {
+			coreModifier = neo4jContainer -> {
+				coreOptions.forEach(neo4jContainer::withNeo4jConfig);
+				return neo4jContainer;
+			};
+		}
+
 		CountDownLatch latch = new CountDownLatch(1);
 		log.info("Starting causal cluster, please be patient.");
 		Configuration configuration = new Configuration(neo4jVersion,
 				numberOfCoreServers,
 				numberOfReadReplicas, startupTimeout, password,
-				initialHeapSize, pagecacheSize, UnaryOperator.identity(), UnaryOperator.identity(),
+				initialHeapSize, pagecacheSize, coreModifier, UnaryOperator.identity(),
 				null);
 		Neo4jCluster cluster = new ClusterFactory(configuration).createCluster();
 		log.info("Cluster is running.");
