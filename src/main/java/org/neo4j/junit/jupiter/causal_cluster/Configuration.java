@@ -22,6 +22,7 @@ import org.testcontainers.containers.Neo4jContainer;
 
 import java.io.Serializable;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 
@@ -118,7 +119,7 @@ final class Configuration implements Serializable {
 	}
 
 	public Configuration withNeo4jVersion(String newNeo4jVersion) {
-		return this.neo4jVersion == newNeo4jVersion ?
+		return Objects.equals(this.neo4jVersion, newNeo4jVersion) ?
 			this :
 			new Configuration(newNeo4jVersion, this.numberOfCoreServers, this.numberOfReadReplicas, this.startupTimeout,
 				this.password, this.initialHeapSize, this.pagecacheSize, this.coreModifier, this.readReplicaModifier,
@@ -150,7 +151,7 @@ final class Configuration implements Serializable {
 	}
 
 	public Configuration withPassword(String newPassword) {
-		return this.password == newPassword ?
+		return Objects.equals(this.password, newPassword) ?
 			this :
 			new Configuration(this.neo4jVersion, this.numberOfCoreServers, this.numberOfReadReplicas,
 				this.startupTimeout, newPassword, this.initialHeapSize, this.pagecacheSize, this.coreModifier,
@@ -189,7 +190,7 @@ final class Configuration implements Serializable {
 	}
 
 	public Configuration withCustomImageName(String newCustomImageName) {
-		return this.customImageName == newCustomImageName ?
+		return Objects.equals(this.customImageName, newCustomImageName) ?
 			this :
 			new Configuration(this.neo4jVersion, this.numberOfCoreServers, this.numberOfReadReplicas,
 				this.startupTimeout, this.password, this.initialHeapSize, this.pagecacheSize, this.coreModifier,
