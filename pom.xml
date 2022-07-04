@@ -45,11 +45,11 @@
 	</scm>
 
 	<properties>
-		<assertj.version>3.22.0</assertj.version>
-
+		<assertj.version>3.23.1</assertj.version>
 		<checkstyle.version>10.3.1</checkstyle.version>
 		<exec-maven-plugin.version>3.0.0</exec-maven-plugin.version>
 		<java.version>8</java.version>
+		<jsr305.version>3.0.2</jsr305.version>
 		<junit-jupiter.version>5.8.2</junit-jupiter.version>
 		<maven-checkstyle-plugin.version>3.1.2</maven-checkstyle-plugin.version>
 		<maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
@@ -75,16 +75,21 @@
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
-				<groupId>org.assertj</groupId>
-				<artifactId>assertj-core</artifactId>
-				<version>${assertj.version}</version>
-			</dependency>
-			<dependency>
 				<groupId>org.junit</groupId>
 				<artifactId>junit-bom</artifactId>
 				<version>${junit-jupiter.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>com.google.code.findbugs</groupId>
+				<artifactId>jsr305</artifactId>
+				<version>${jsr305.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.assertj</groupId>
+				<artifactId>assertj-core</artifactId>
+				<version>${assertj.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.slf4j</groupId>
@@ -100,15 +105,34 @@
 	</dependencyManagement>
 
 	<dependencies>
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>neo4j</artifactId>
+			<version>${testcontainers.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers</artifactId>
+			<version>${testcontainers.version}</version>
+			<exclusions>
+				<exclusion>
+					<!-- This exclusion is prevents us ending up with two different jna versions on the classpath -->
+					<groupId>org.rnorth.visible-assertions</groupId>
+					<artifactId>visible-assertions</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
 
 		<dependency>
 			<groupId>org.assertj</groupId>
 			<artifactId>assertj-core</artifactId>
 			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.junit.jupiter</groupId>
-			<artifactId>junit-jupiter</artifactId>
 		</dependency>
 
 		<dependency>
@@ -134,25 +158,6 @@
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
 			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>org.testcontainers</groupId>
-			<artifactId>neo4j</artifactId>
-			<version>${testcontainers.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.testcontainers</groupId>
-			<artifactId>testcontainers</artifactId>
-			<version>${testcontainers.version}</version>
-			<exclusions>
-				<exclusion>
-					<!-- This exclusion is prevents us ending up with two different jna versions on the classpath -->
-					<groupId>org.rnorth.visible-assertions</groupId>
-					<artifactId>visible-assertions</artifactId>
-				</exclusion>
-			</exclusions>
 		</dependency>
 
 	</dependencies>
@@ -189,8 +194,9 @@
 						<keepBlankLines>true</keepBlankLines>
 						<nrOfIndentSpace>-1</nrOfIndentSpace>
 						<sortProperties>true</sortProperties>
-						<sortDependencies>groupId,artifactId</sortDependencies>
+						<sortDependencies>scope,groupId,artifactId</sortDependencies>
 						<createBackupFile>false</createBackupFile>
+						<expandEmptyElements>false</expandEmptyElements>
 					</configuration>
 				</plugin>
 			</plugins>
@@ -344,7 +350,7 @@
 								<requireJavaVersion>
 									<version>11</version>
 								</requireJavaVersion>
-								<DependencyConvergence></DependencyConvergence>
+								<DependencyConvergence/>
 								<requireMavenVersion>
 									<version>${maven.version}</version>
 								</requireMavenVersion>
