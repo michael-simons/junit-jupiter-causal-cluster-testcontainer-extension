@@ -37,7 +37,14 @@ public interface Neo4jServer {
 	 * Server can either be a core or replica server.
 	 */
 	enum Type {
+
+		/**
+		 * Primary or core servers.
+		 */
 		CORE_SERVER,
+		/**
+		 * Secondary or read replicas / follower.
+		 */
 		REPLICA_SERVER
 	}
 

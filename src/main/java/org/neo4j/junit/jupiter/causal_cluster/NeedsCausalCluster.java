@@ -64,5 +64,8 @@ public @interface NeedsCausalCluster {
 	 */
 	long startupTimeOutInMillis() default CausalClusterExtension.DEFAULT_STARTUP_TIMEOUT_IN_MILLIS;
 
+	/**
+	 * @return The password to use for bolt connections into the cluster.
+	 */
 	String password() default "password";
 }

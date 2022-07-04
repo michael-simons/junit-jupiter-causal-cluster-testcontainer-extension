@@ -37,8 +37,14 @@ import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer.Type;
  */
 public interface Neo4jCluster {
 
+	/**
+	 * Default timeout to wait for a container to start.
+	 */
 	Duration NEO4J_CONTAINER_START_TIMEOUT = Duration.ofMinutes(3);
 
+	/**
+	 * Default timeout to wait for a container to stop.
+	 */
 	Duration NEO4J_CONTAINER_STOP_TIMEOUT = Duration.ofSeconds(
 		Long.parseLong(System.getenv().getOrDefault("NEO4J_SHUTDOWN_TIMEOUT", "120")));
 
@@ -101,7 +107,6 @@ public interface Neo4jCluster {
 
 	/**
 	 * Stops {@code n} random servers.
-	 *
 	 * This method sends a SIGTERM. Upon receipt of the signal neo4j will shut down gracefully and the process will
 	 * terminate once neo4j has finished its shutdown tasks such as writing checkpoints to disk and standing down from
 	 * the cluster membership. If the process does not terminate within the {@link #NEO4J_CONTAINER_STOP_TIMEOUT} then
@@ -114,7 +119,6 @@ public interface Neo4jCluster {
 
 	/**
 	 * Stops {@code n} random servers but none of the given exclusions.
-	 *
 	 * This method sends a SIGTERM. Upon receipt of the signal neo4j will shut down gracefully and the process will
 	 * terminate once neo4j has finished its shutdown tasks such as writing checkpoints to disk and standing down from
 	 * the cluster membership. If the process does not terminate within the {@link #NEO4J_CONTAINER_STOP_TIMEOUT} then
@@ -131,7 +135,6 @@ public interface Neo4jCluster {
 
 	/**
 	 * Stops {@code n} random servers but none of the given exclusions.
-	 *
 	 * This method sends a SIGTERM. Upon receipt of the signal neo4j will shut down gracefully and the process will
 	 * terminate once neo4j has finished its shutdown tasks such as writing checkpoints to disk and standing down from
 	 * the cluster membership. If the process does not terminate within the {@link NEO4J_CONTAINER_STOP_TIMEOUT} then
@@ -145,7 +148,6 @@ public interface Neo4jCluster {
 
 	/**
 	 * Kills {@code n} random servers.
-	 *
 	 * This method sends a SIGKILL. Upon receipt of the signal neo4j will shut down immediately without performing
 	 * shutdown tasks such as writing checkpoints to disk and standing down from the cluster membership.
 	 *
@@ -156,7 +158,6 @@ public interface Neo4jCluster {
 
 	/**
 	 * Kills {@code n} random servers but none of the given exclusions.
-	 *
 	 * This method sends a SIGKILL. Upon receipt of the signal neo4j will shut down immediately without performing
 	 * shutdown tasks such as writing checkpoints to disk and standing down from the cluster membership.
 	 *
@@ -171,7 +172,6 @@ public interface Neo4jCluster {
 
 	/**
 	 * Kills {@code n} random servers but none of the given exclusions.
-	 *
 	 * This method sends a SIGKILL. Upon receipt of the signal neo4j will shut down immediately without performing
 	 * shutdown tasks such as writing checkpoints to disk and standing down from the cluster membership.
 	 *
@@ -264,9 +264,24 @@ public interface Neo4jCluster {
 	 */
 	Set<Neo4jServer> unisolateServers(Set<Neo4jServer> servers);
 
+	/**
+	 * Waits for a specific message to appear on all servers in the given set.
+	 *
+	 * @param servers The set of servers at which the message should appear
+	 * @param message The message to look for
+	 * @param timeout How long to wait for the message
+	 * @throws Neo4jTimeoutException If the timeout has been reached before the message appeared.
+	 */
 	void waitForLogMessageOnAll(Set<Neo4jServer> servers, String message, Duration timeout)
 		throws Neo4jTimeoutException;
 
+	/**
+	 * Wait until the bolt port is ready on all the servers in the given set.
+	 *
+	 * @param servers The servers who should provide proper bolt
+	 * @param timeout How long to wait for bolt
+	 * @throws Neo4jTimeoutException If the timeout has been reached before all servers became reachable.
+	 */
 	void waitForBoltOnAll(Set<Neo4jServer> servers, Duration timeout)
 		throws Neo4jTimeoutException;
 
