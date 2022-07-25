@@ -19,9 +19,14 @@
 package org.neo4j.junit.jupiter.causal_cluster;
 
 import org.testcontainers.containers.Neo4jContainer;
+import org.testcontainers.containers.Neo4jLabsPlugin;
 
 import java.io.Serializable;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
@@ -47,6 +52,8 @@ final class Configuration implements Serializable {
 
 	private final int pagecacheSize;
 
+	private final List<Neo4jLabsPlugin> plugins;
+
 	/**
 	 * Optional custom image name. Has precedence of the version number if set.
 	 */
@@ -57,7 +64,7 @@ final class Configuration implements Serializable {
 
 	Configuration(String neo4jVersion, int numberOfCoreServers, int numberOfReadReplicas, Duration startupTimeout,
 		String password, int initialHeapSize, int pagecacheSize, UnaryOperator<Neo4jContainer<?>> coreModifier,
-		UnaryOperator<Neo4jContainer<?>> readReplicaModifier, String customImageName) {
+		UnaryOperator<Neo4jContainer<?>> readReplicaModifier, String customImageName, List<Neo4jLabsPlugin> plugins) {
 		this.neo4jVersion = neo4jVersion;
 		this.numberOfCoreServers = numberOfCoreServers;
 		this.numberOfReadReplicas = numberOfReadReplicas;
@@ -68,6 +75,7 @@ final class Configuration implements Serializable {
 		this.coreModifier = coreModifier;
 		this.readReplicaModifier = readReplicaModifier;
 		this.customImageName = customImageName;
+		this.plugins = new ArrayList<>(plugins);
 	}
 
 	String getImageName() {
@@ -107,6 +115,10 @@ final class Configuration implements Serializable {
 		return this.customImageName;
 	}
 
+	public List<Neo4jLabsPlugin> getPlugins() {
+		return Collections.unmodifiableList(this.plugins);
+	}
+
 	/**
 	 * @return true if this configuration starts a Neo4j 3.5 cluster.
 	 */
@@ -123,7 +135,7 @@ final class Configuration implements Serializable {
 			this :
 			new Configuration(newNeo4jVersion, this.numberOfCoreServers, this.numberOfReadReplicas, this.startupTimeout,
 				this.password, this.initialHeapSize, this.pagecacheSize, this.coreModifier, this.readReplicaModifier,
-				this.customImageName);
+				this.customImageName, this.plugins);
 	}
 
 	public Configuration withNumberOfCoreServers(int newNumberOfCoreServers) {
@@ -131,7 +143,7 @@ final class Configuration implements Serializable {
 			this :
 			new Configuration(this.neo4jVersion, newNumberOfCoreServers, this.numberOfReadReplicas, this.startupTimeout,
 				this.password, this.initialHeapSize, this.pagecacheSize, this.coreModifier, this.readReplicaModifier,
-				this.customImageName);
+				this.customImageName, this.plugins);
 	}
 
 	public Configuration withNumberOfReadReplicas(int newNumberOfReadReplicas) {
@@ -139,7 +151,7 @@ final class Configuration implements Serializable {
 			this :
 			new Configuration(this.neo4jVersion, this.numberOfCoreServers, newNumberOfReadReplicas, this.startupTimeout,
 				this.password, this.initialHeapSize, this.pagecacheSize, this.coreModifier, this.readReplicaModifier,
-				this.customImageName);
+				this.customImageName, this.plugins);
 	}
 
 	public Configuration withStartupTimeout(Duration newStartupTimeout) {
@@ -147,7 +159,7 @@ final class Configuration implements Serializable {
 			this :
 			new Configuration(this.neo4jVersion, this.numberOfCoreServers, this.numberOfReadReplicas, newStartupTimeout,
 				this.password, this.initialHeapSize, this.pagecacheSize, this.coreModifier, this.readReplicaModifier,
-				this.customImageName);
+				this.customImageName, this.plugins);
 	}
 
 	public Configuration withPassword(String newPassword) {
@@ -155,7 +167,7 @@ final class Configuration implements Serializable {
 			this :
 			new Configuration(this.neo4jVersion, this.numberOfCoreServers, this.numberOfReadReplicas,
 				this.startupTimeout, newPassword, this.initialHeapSize, this.pagecacheSize, this.coreModifier,
-				this.readReplicaModifier, this.customImageName);
+				this.readReplicaModifier, this.customImageName, this.plugins);
 	}
 
 	public Configuration withInitialHeapSize(int newInitialHeapSize) {
@@ -163,7 +175,7 @@ final class Configuration implements Serializable {
 			this :
 			new Configuration(this.neo4jVersion, this.numberOfCoreServers, this.numberOfReadReplicas,
 				this.startupTimeout, this.password, newInitialHeapSize, this.pagecacheSize, coreModifier,
-				this.readReplicaModifier, this.customImageName);
+				this.readReplicaModifier, this.customImageName, this.plugins);
 	}
 
 	public Configuration withPagecacheSize(int newPagecacheSize) {
@@ -171,7 +183,7 @@ final class Configuration implements Serializable {
 			this :
 			new Configuration(this.neo4jVersion, this.numberOfCoreServers, this.numberOfReadReplicas,
 				this.startupTimeout, this.password, this.initialHeapSize, newPagecacheSize, this.coreModifier,
-				this.readReplicaModifier, this.customImageName);
+				this.readReplicaModifier, this.customImageName, this.plugins);
 	}
 
 	public Configuration withCoreModifier(UnaryOperator<Neo4jContainer<?>> newCoreModifier) {
@@ -179,14 +191,14 @@ final class Configuration implements Serializable {
 			this :
 			new Configuration(this.neo4jVersion, this.numberOfCoreServers, this.numberOfReadReplicas,
 				this.startupTimeout, this.password, this.initialHeapSize, this.pagecacheSize, newCoreModifier,
-				this.readReplicaModifier, this.customImageName);
+				this.readReplicaModifier, this.customImageName, this.plugins);
 	}
 
 	public Configuration withReadReplicaModifier(UnaryOperator<Neo4jContainer<?>> newReadReplicaModifier) {
 		return this.readReplicaModifier == newReadReplicaModifier ? this :
 			new Configuration(this.neo4jVersion, this.numberOfCoreServers, this.numberOfReadReplicas,
 				this.startupTimeout, this.password, this.initialHeapSize, this.pagecacheSize, this.coreModifier,
-				newReadReplicaModifier, this.customImageName);
+				newReadReplicaModifier, this.customImageName, this.plugins);
 	}
 
 	public Configuration withCustomImageName(String newCustomImageName) {
@@ -194,7 +206,17 @@ final class Configuration implements Serializable {
 			this :
 			new Configuration(this.neo4jVersion, this.numberOfCoreServers, this.numberOfReadReplicas,
 				this.startupTimeout, this.password, this.initialHeapSize, this.pagecacheSize, this.coreModifier,
-				this.readReplicaModifier, newCustomImageName);
+				this.readReplicaModifier, newCustomImageName, this.plugins);
+	}
+
+	public Configuration withPlugins(Neo4jLabsPlugin... newPlugins) {
+		List<Neo4jLabsPlugin> hlp =
+			newPlugins == null || newPlugins.length == 0 ? Collections.emptyList() : Arrays.asList(newPlugins);
+		return Objects.equals(this.plugins, hlp) ?
+			this :
+			new Configuration(this.neo4jVersion, this.numberOfCoreServers, this.numberOfReadReplicas,
+				this.startupTimeout, this.password, this.initialHeapSize, this.pagecacheSize, this.coreModifier,
+				this.readReplicaModifier, this.customImageName, hlp);
 	}
 
 	public Neo4jContainer<?> applyCoreModifier(Neo4jContainer<?> core) {

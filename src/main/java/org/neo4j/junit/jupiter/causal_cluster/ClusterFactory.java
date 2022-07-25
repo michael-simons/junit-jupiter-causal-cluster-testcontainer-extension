@@ -32,6 +32,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer.Type;
 import org.testcontainers.containers.Neo4jContainer;
+import org.testcontainers.containers.Neo4jLabsPlugin;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.SocatContainer;
 
@@ -174,6 +175,8 @@ final class ClusterFactory {
 			.withNeo4jConfig("causal_clustering.minimum_core_cluster_size_at_runtime", numberOfCoreServers)
 			.withStartupTimeout(configuration.getStartupTimeout());
 
+		coreContainer = configurePlugins(coreContainer);
+
 		return configuration.applyCoreModifier(coreContainer);
 	}
 
@@ -194,7 +197,16 @@ final class ClusterFactory {
 				.withNeo4jConfig("causal_clustering.discovery_members", initialDiscoveryMembers);
 		}
 
+		readReplicaContainer = configurePlugins(readReplicaContainer);
+
 		return configuration.applyReadReplicaModifier(readReplicaContainer);
+	}
+
+	private Neo4jContainer<?> configurePlugins(Neo4jContainer<?> readReplicaContainer) {
+		if (!configuration.getPlugins().isEmpty()) {
+			readReplicaContainer = readReplicaContainer.withLabsPlugins(configuration.getPlugins().toArray(new Neo4jLabsPlugin[0]));
+		}
+		return readReplicaContainer;
 	}
 
 	private Neo4jContainer<?> newContainerWithCommonConfig(Map.Entry<Integer, String> portAndAlias, Network network) {

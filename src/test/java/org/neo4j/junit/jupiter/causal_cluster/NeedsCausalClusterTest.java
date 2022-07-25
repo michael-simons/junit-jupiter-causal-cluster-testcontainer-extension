@@ -36,6 +36,12 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.platform.engine.discovery.DiscoverySelectors;
 import org.junit.platform.testkit.engine.EngineTestKit;
 import org.junit.platform.testkit.engine.Events;
+import org.neo4j.driver.AuthToken;
+import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Session;
+import org.testcontainers.containers.Neo4jLabsPlugin;
 
 /**
  * Testing the test.
@@ -239,6 +245,26 @@ class NeedsCausalClusterTest {
 
 			assertThat(clusterUris1).containsExactlyInAnyOrderElementsOf(clusterUris2);
 			DriverUtils.verifyConnectivity(clusterUris1);
+		}
+	}
+
+	@NeedsCausalCluster(plugins = Neo4jLabsPlugin.APOC, password = "apoc")
+	static class ClusterWithPlugins {
+
+		@CausalCluster
+		private static URI neo4jUri;
+
+		@Test
+		void aTest() {
+
+			AuthToken authToken = AuthTokens.basic("neo4j", "apoc");
+			try (
+				Driver driver = GraphDatabase.driver(neo4jUri, authToken);
+				Session session = driver.session();
+			) {
+				String apoc = session.run("RETURN apoc.version() AS output").single().get(0).asString();
+				assertThat(apoc).isNotNull().startsWith("4.");
+			}
 		}
 	}
 

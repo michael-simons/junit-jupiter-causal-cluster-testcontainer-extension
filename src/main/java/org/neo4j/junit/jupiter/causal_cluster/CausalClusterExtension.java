@@ -28,6 +28,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -69,11 +70,11 @@ class CausalClusterExtension implements BeforeAllCallback {
 	private static final Class[] URI_FIELD_SUPPORTED_CLASSES = { URI.class, String.class, Collection.class,
 		List.class, Neo4jCluster.class };
 
-	private static final Configuration DEFAULT_CONFIGURATION = new Configuration(DEFAULT_NEO4J_VERSION,
+	static final Configuration DEFAULT_CONFIGURATION = new Configuration(DEFAULT_NEO4J_VERSION,
 		DEFAULT_NUMBER_OF_CORE_SERVERS,
 		DEFAULT_NUMBER_OF_READ_REPLICAS, Duration.ofMillis(DEFAULT_STARTUP_TIMEOUT_IN_MILLIS), DEFAULT_PASSWORD,
 		DEFAULT_HEAP_SIZE_IN_MB, DEFAULT_PAGE_CACHE_IN_MB, UnaryOperator.identity(), UnaryOperator.identity(),
-		null);
+		null, Collections.emptyList());
 
 	public void beforeAll(ExtensionContext context) {
 
@@ -97,7 +98,8 @@ class CausalClusterExtension implements BeforeAllCallback {
 					.withPassword(annotation.password())
 					.withCoreModifier(coreModifier)
 					.withReadReplicaModifier(readReplicaModifier)
-					.withCustomImageName(getImageName(annotation));
+					.withCustomImageName(getImageName(annotation))
+					.withPlugins(annotation.plugins());
 				store.put(KEY_CONFIG, configuration);
 
 				injectFields(context, testInstance);

@@ -26,6 +26,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.testcontainers.containers.Neo4jLabsPlugin;
 
 /**
  * Registers the Causal Cluster extension.
@@ -68,4 +69,9 @@ public @interface NeedsCausalCluster {
 	 * @return The password to use for bolt connections into the cluster.
 	 */
 	String password() default "password";
+
+	/**
+	 * @return Plugins to enable in the containers.
+	 */
+	Neo4jLabsPlugin[] plugins() default {};
 }
