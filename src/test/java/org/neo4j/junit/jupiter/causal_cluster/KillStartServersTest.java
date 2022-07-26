@@ -39,7 +39,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.commons.logging.Logger;
 import org.junit.platform.commons.logging.LoggerFactory;
 
-@NeedsCausalCluster
+@NeedsCausalCluster(neo4jVersion = "4.3")
 class KillStartServersTest {
 
 	private final static String NEO4J_UP_MESSAGE = "Remote interface available at";
