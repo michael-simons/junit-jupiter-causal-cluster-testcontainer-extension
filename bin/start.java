@@ -19,7 +19,7 @@
  */
 
 //DEPS info.picocli:picocli:4.2.0
-//DEPS eu.michael-simons.neo4j:junit-jupiter-causal-cluster-testcontainer-extension:2021.0.2
+//DEPS eu.michael-simons.neo4j:junit-jupiter-causal-cluster-testcontainer-extension:2022.1.0
 //DEPS org.slf4j:slf4j-simple:1.7.32
 
 package org.neo4j.junit.jupiter.causal_cluster;
@@ -28,13 +28,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.impl.SimpleLogger;
 import org.testcontainers.containers.Neo4jContainer;
+import org.testcontainers.containers.Neo4jLabsPlugin;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -49,7 +52,7 @@ import java.util.function.UnaryOperator;
  * @author Michael J. Simons
  */
 @Command(name = "start",
-		description = "Starts a Neo4j causal cluster")
+	description = "Starts a Neo4j causal cluster")
 public final class start implements Callable<Integer> {
 
 	private final Logger log = LoggerFactory.getLogger(start.class);
@@ -84,6 +87,9 @@ public final class start implements Callable<Integer> {
 	@Option(names = "--core-options", description = "Custom Neo4j options for the core servers.")
 	private Map<String, String> coreOptions = new HashMap<>();
 
+	@Option(names = "--plugin", description = "Neo4j Labs plugins to be activated in the cluster.")
+	private List<Neo4jLabsPlugin> plugins = new ArrayList<>();
+
 	public static void main(String... args) {
 
 		System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "INFO");
@@ -116,10 +122,10 @@ public final class start implements Callable<Integer> {
 		CountDownLatch latch = new CountDownLatch(1);
 		log.info("Starting causal cluster, please be patient.");
 		Configuration configuration = new Configuration(neo4jVersion,
-				numberOfCoreServers,
-				numberOfReadReplicas, startupTimeout, password,
-				initialHeapSize, pagecacheSize, coreModifier, UnaryOperator.identity(),
-				null);
+			numberOfCoreServers,
+			numberOfReadReplicas, startupTimeout, password,
+			initialHeapSize, pagecacheSize, coreModifier, UnaryOperator.identity(),
+			null, plugins);
 		Neo4jCluster cluster = new ClusterFactory(configuration).createCluster();
 		log.info("Cluster is running.");
 		log.info("Core servers:");
