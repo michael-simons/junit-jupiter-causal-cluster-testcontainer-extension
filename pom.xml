@@ -67,7 +67,7 @@
 		<nexus-staging-maven-plugin.version>1.6.13</nexus-staging-maven-plugin.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<slf4j.version>1.7.36</slf4j.version>
+		<slf4j.version>2.0.0</slf4j.version>
 		<sortpom-maven-plugin.version>3.2.0</sortpom-maven-plugin.version>
 		<testcontainers.version>1.17.3</testcontainers.version>
 	</properties>
