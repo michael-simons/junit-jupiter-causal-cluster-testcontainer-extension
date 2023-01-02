@@ -46,7 +46,7 @@
 
 	<properties>
 		<assertj.version>3.23.1</assertj.version>
-		<checkstyle.version>10.5.0</checkstyle.version>
+		<checkstyle.version>10.6.0</checkstyle.version>
 		<exec-maven-plugin.version>3.1.0</exec-maven-plugin.version>
 		<java.version>8</java.version>
 		<jsr305.version>3.0.2</jsr305.version>
